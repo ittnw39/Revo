@@ -7,7 +7,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'web-build'),
     filename: 'bundle.js',
-    publicPath: '/',
+    publicPath: '/Revo/',
   },
   devServer: {
     static: path.join(__dirname, 'public'),
