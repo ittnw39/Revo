@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   StatusBar,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { MainTabParamList } from '../../types/navigation';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 
@@ -14,13 +17,10 @@ import Header from '../../components/Header';
 const screenWidth = 393;
 const screenHeight = 852;
 
-interface RecordsScreenProps {
-  onNavigateToRecording: () => void;
-  onNavigateToRecords: () => void;
-  onNavigateToProfile: () => void;
-}
+type RecordsScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Records'>;
 
-const RecordsScreen: React.FC<RecordsScreenProps> = ({ onNavigateToRecording, onNavigateToRecords, onNavigateToProfile }) => {
+const RecordsScreen: FC = () => {
+  const navigation = useNavigation<RecordsScreenNavigationProp>();
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
@@ -80,14 +80,14 @@ const RecordsScreen: React.FC<RecordsScreenProps> = ({ onNavigateToRecording, on
       {/* 녹음이 없을 때의 상태 */}
       <View style={styles.emptyStateContainer}>
         <Text style={styles.emptyStateTitle} numberOfLines={1}>오늘 첫 녹음을 남겨보세요</Text>
-        <TouchableOpacity style={styles.recordButton} onPress={onNavigateToRecording}>
-          <Text style={styles.recordButtonText} numberOfLines={1}>녹음하러 가기</Text>
+        <TouchableOpacity style={styles.recordButton} onPress={() => navigation.navigate('Recording')}>
+          <Text style={styles.recordButtonText}>녹음하러 가기</Text>
         </TouchableOpacity>
       </View>
 
       {/* 캐릭터 */}
       <View style={styles.characterContainer}>
-        <svg width="178" height="178" viewBox="0 0 178 178" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="180" height="180" viewBox="0 0 178 178" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="89" cy="89" r="89" fill="#FED046"/>
           <circle cx="67" cy="33" r="18" transform="rotate(90 67 33)" fill="#F5F5F5"/>
           <circle cx="104.532" cy="33" r="18" transform="rotate(90 104.532 33)" fill="#F5F5F5"/>
@@ -110,7 +110,12 @@ const RecordsScreen: React.FC<RecordsScreenProps> = ({ onNavigateToRecording, on
       </View>
 
       {/* 하단 네비게이션 바 */}
-      <NavigationBar onNavigateToRecords={onNavigateToRecords} onNavigateToRecording={onNavigateToRecording} onNavigateToProfile={onNavigateToProfile} currentPage="Records" />
+      <NavigationBar 
+        onNavigateToRecords={() => navigation.navigate('Records')} 
+        onNavigateToRecording={() => navigation.navigate('Recording')} 
+        onNavigateToProfile={() => navigation.navigate('Profile')} 
+        currentPage="Records" 
+      />
     </SafeAreaView>
   );
 };
@@ -195,23 +200,26 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   recordButton: {
+    backgroundColor: '#B780FF',
+    borderRadius: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignSelf: 'center', // 버튼을 가운데 정렬
     width: 146,
     height: 46,
-    borderRadius: 50,
-    backgroundColor: '#B780FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden', // 텍스트가 버튼 밖으로 나가지 않도록
-    paddingHorizontal: 12, // 양옆 패딩 12px
-    paddingVertical: 10,   // 위아래 패딩 10px
   },
   recordButtonText: {
-    color: '#000000',
-    fontSize: 22,
-    fontWeight: '600',
-    letterSpacing: 0.44,
+    color: '#0A0A0A',
     textAlign: 'center',
-    lineHeight: 26, // 텍스트 높이를 명시적으로 설정
+    fontFamily: 'Pretendard',
+    fontSize: 22,
+    fontStyle: 'normal',
+    fontWeight: '600',
+    lineHeight: undefined, // React Native에서 normal과 동일
+    letterSpacing: 0.44,
   },
   characterContainer: {
     position: 'absolute',

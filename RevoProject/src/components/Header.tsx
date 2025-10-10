@@ -1,7 +1,7 @@
-import React from 'react';
+import { FC } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const Header: React.FC = () => {
+const Header: FC = () => {
   return (
     <View style={styles.header}>
       <Text style={styles.logoText}>Rev_o</Text>

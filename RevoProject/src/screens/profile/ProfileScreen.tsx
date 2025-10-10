@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   StatusBar,
   ScrollView,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MainTabParamList, RootStackParamList } from '../../types/navigation';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 
@@ -15,19 +19,11 @@ import Header from '../../components/Header';
 const screenWidth = 393;
 const screenHeight = 852;
 
-interface ProfileScreenProps {
-  onNavigateToRecording: () => void;
-  onNavigateToRecords: () => void;
-  onNavigateToProfile: () => void;
-  onNavigateToEmotionDetail: () => void;
-}
+type ProfileScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Profile'> & 
+  NativeStackNavigationProp<RootStackParamList>;
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
-  onNavigateToRecording, 
-  onNavigateToRecords, 
-  onNavigateToProfile,
-  onNavigateToEmotionDetail
-}) => {
+const ProfileScreen: FC = () => {
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
@@ -83,35 +79,25 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.emotionCardsContent}
       >
-        <TouchableOpacity style={[styles.emotionCard, styles.happyCard]} onPress={onNavigateToEmotionDetail}>
+        <TouchableOpacity style={[styles.emotionCard, styles.happyCard]} onPress={() => navigation.navigate('EmotionDetail')}>
           <Text style={styles.emotionDate}>7월 26일</Text>
           <Text style={styles.emotionText}>행복</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.emotionCard, styles.angryCard]} onPress={onNavigateToEmotionDetail}>
+        <TouchableOpacity style={[styles.emotionCard, styles.angryCard]} onPress={() => navigation.navigate('EmotionDetail')}>
           <Text style={styles.emotionDate}>7월 26일</Text>
           <Text style={styles.emotionText}>분노</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.emotionCard, styles.happyCard2]} onPress={onNavigateToEmotionDetail}>
+        <TouchableOpacity style={[styles.emotionCard, styles.happyCard2]} onPress={() => navigation.navigate('EmotionDetail')}>
           <Text style={styles.emotionDate}>7월 26일</Text>
           <Text style={styles.emotionText}>슬픔</Text>
-          <View style={styles.emotionIcon}>
-            <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="30" cy="30" r="30" fill="#00C0FF"/>
-              <circle cx="22" cy="22" r="8" fill="#FFFFFF"/>
-              <circle cx="38" cy="22" r="8" fill="#FFFFFF"/>
-              <circle cx="22" cy="22" r="4" fill="#00C0FF"/>
-              <circle cx="38" cy="22" r="4" fill="#00C0FF"/>
-              <path d="M20 38C20 35 25 32 30 32C35 32 40 35 40 38" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </View>
         </TouchableOpacity>
       </ScrollView>
 
       {/* 하단 네비게이션 바 */}
       <NavigationBar 
-        onNavigateToRecords={onNavigateToRecords} 
-        onNavigateToRecording={onNavigateToRecording} 
-        onNavigateToProfile={onNavigateToProfile}
+        onNavigateToRecords={() => navigation.navigate('Records')} 
+        onNavigateToRecording={() => navigation.navigate('Recording')} 
+        onNavigateToProfile={() => navigation.navigate('Profile')}
         currentPage="Profile"
       />
     </SafeAreaView>

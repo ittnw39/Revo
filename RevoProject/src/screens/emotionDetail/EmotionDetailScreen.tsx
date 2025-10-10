@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   StatusBar,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigation';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 
@@ -14,19 +17,10 @@ import Header from '../../components/Header';
 const screenWidth = 393;
 const screenHeight = 852;
 
-interface EmotionDetailScreenProps {
-  onNavigateToRecording: () => void;
-  onNavigateToRecords: () => void;
-  onNavigateToProfile: () => void;
-  onNavigateBack: () => void;
-}
+type EmotionDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EmotionDetail'>;
 
-const EmotionDetailScreen: React.FC<EmotionDetailScreenProps> = ({ 
-  onNavigateToRecording, 
-  onNavigateToRecords, 
-  onNavigateToProfile,
-  onNavigateBack
-}) => {
+const EmotionDetailScreen: FC = () => {
+  const navigation = useNavigation<EmotionDetailScreenNavigationProp>();
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
@@ -85,9 +79,9 @@ const EmotionDetailScreen: React.FC<EmotionDetailScreenProps> = ({
 
       {/* 하단 네비게이션 바 */}
       <NavigationBar 
-        onNavigateToRecords={onNavigateToRecords} 
-        onNavigateToRecording={onNavigateToRecording} 
-        onNavigateToProfile={onNavigateToProfile}
+        onNavigateToRecords={() => navigation.navigate('MainTabs')} 
+        onNavigateToRecording={() => navigation.navigate('MainTabs')} 
+        onNavigateToProfile={() => navigation.navigate('MainTabs')}
         currentPage="Recording"
       />
     </SafeAreaView>

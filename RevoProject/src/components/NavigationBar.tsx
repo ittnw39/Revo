@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 interface NavigationBarProps {
@@ -8,7 +8,7 @@ interface NavigationBarProps {
   currentPage?: 'Recording' | 'Records' | 'Profile';
 }
 
-const NavigationBar: React.FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigateToRecording, onNavigateToProfile, currentPage }) => {
+const NavigationBar: FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigateToRecording, onNavigateToProfile, currentPage }) => {
   return (
     <View style={styles.navigationBar}>
       <TouchableOpacity style={styles.navItem} onPress={onNavigateToRecords}>

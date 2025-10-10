@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   StatusBar,
 } from 'react-native';
-import Icon from '../../assets/icons/record/Icon.svg';
-import Vector from '../../assets/icons/record/Vector.svg';
-import Ellipse196 from '../../assets/icons/record/Ellipse 196.svg';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { MainTabParamList } from '../../types/navigation';
+// Ellipse196 SVG를 코드로 대체
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 // JPG 이미지 대신 기본 프로필 이미지 사용
@@ -18,13 +19,10 @@ import Header from '../../components/Header';
 const screenWidth = 393;
 const screenHeight = 852;
 
-interface RecordingScreenProps {
-  onNavigateToRecords: () => void;
-  onNavigateToRecording: () => void;
-  onNavigateToProfile: () => void;
-}
+type RecordingScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Recording'>;
 
-const RecordingScreen: React.FC<RecordingScreenProps> = ({ onNavigateToRecords, onNavigateToRecording, onNavigateToProfile }) => {
+const RecordingScreen: FC = () => {
+  const navigation = useNavigation<RecordingScreenNavigationProp>();
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
@@ -48,7 +46,9 @@ const RecordingScreen: React.FC<RecordingScreenProps> = ({ onNavigateToRecords, 
       {/* 녹음 버튼 */}
       <View style={styles.recordingButtonContainer}>
         <TouchableOpacity style={styles.recordingButton}>
-          <Ellipse196 width={64} height={64} />
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="32" fill="#B780FF"/>
+          </svg>
           <View style={styles.recordingIconContainer}>
             <svg width="25" height="29" viewBox="0 0 29 33" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M14.5017 2C13.0664 2 11.6898 2.52377 10.6749 3.4561C9.6599 4.38842 9.08971 5.65292 9.08971 6.97143V13.6C9.08971 14.9185 9.6599 16.183 10.6749 17.1153C11.6898 18.0477 13.0664 18.5714 14.5017 18.5714C15.9371 18.5714 17.3137 18.0477 18.3286 17.1153C19.3436 16.183 19.9138 14.9185 19.9138 13.6V6.97143C19.9138 5.65292 19.3436 4.38842 18.3286 3.4561C17.3137 2.52377 15.9371 2 14.5017 2Z" fill="black"/>
@@ -60,7 +60,12 @@ const RecordingScreen: React.FC<RecordingScreenProps> = ({ onNavigateToRecords, 
       </View>
 
       {/* 하단 네비게이션 바 */}
-      <NavigationBar onNavigateToRecords={onNavigateToRecords} onNavigateToRecording={onNavigateToRecording} onNavigateToProfile={onNavigateToProfile} currentPage="Recording" />
+      <NavigationBar 
+        onNavigateToRecords={() => navigation.navigate('Records')} 
+        onNavigateToRecording={() => navigation.navigate('Recording')} 
+        onNavigateToProfile={() => navigation.navigate('Profile')} 
+        currentPage="Recording" 
+      />
 
     </SafeAreaView>
   );
