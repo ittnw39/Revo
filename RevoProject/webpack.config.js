@@ -5,9 +5,9 @@ module.exports = {
   mode: 'development',
   entry: './index.web.js',
   output: {
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'web-build'),
     filename: 'bundle.js',
-    publicPath: '/',
+    publicPath: './',
   },
   resolve: {
     extensions: ['.web.js', '.js', '.jsx', '.ts', '.tsx', '.json'],
