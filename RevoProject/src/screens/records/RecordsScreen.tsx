@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,16 @@ type RecordsScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Re
 
 const RecordsScreen: FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
+  
+  // 로컬스토리지에서 온보딩 완료 상태 확인
+  useEffect(() => {
+    const isOnboardingCompleted = localStorage.getItem('onboardingCompleted');
+    if (isOnboardingCompleted !== 'true') {
+      // 온보딩이 완료되지 않은 경우 온보딩 화면으로 이동
+      navigation.navigate('OnBoarding');
+    }
+  }, [navigation]);
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />

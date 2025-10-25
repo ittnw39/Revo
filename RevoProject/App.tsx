@@ -13,6 +13,7 @@ import {
 
 // Screens
 import OnBoardingScreen1 from './src/screens/onBoarding/OnBoardingScreen1';
+import OnBoardingScreen2 from './src/screens/onBoarding/OnBoardingScreen2';
 import RecordingScreen from './src/screens/recording/RecordingScreen';
 import RecordsScreen from './src/screens/records/RecordsScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
@@ -38,6 +39,7 @@ function App() {
           }}
         >
           <Stack.Screen name="OnBoarding" component={OnBoardingScreen1} />
+          <Stack.Screen name="OnBoarding2" component={OnBoardingScreen2} />
           <Stack.Screen name="Recording" component={RecordingScreen} />
           <Stack.Screen name="Records" component={RecordsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />

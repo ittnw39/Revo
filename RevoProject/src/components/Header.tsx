@@ -1,7 +1,15 @@
 import { FC } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const Header: FC = () => {
+interface HeaderProps {
+  hideOnOnboarding?: boolean;
+}
+
+const Header: FC<HeaderProps> = ({ hideOnOnboarding = false }) => {
+  // 온보딩 화면에서는 헤더를 숨김
+  if (hideOnOnboarding) {
+    return null;
+  }
   return (
     <View style={styles.header}>
       <Text style={styles.logoText}>Rev_o</Text>
