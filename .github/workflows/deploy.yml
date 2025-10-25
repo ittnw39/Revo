@@ -38,13 +38,17 @@ jobs:
         cd RevoProject
         npm run build:web
         
+    - name: Copy build files to root
+      run: |
+        cp -r RevoProject/web-build/* ./
+        
     - name: Setup Pages
       uses: actions/configure-pages@v4
       
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: './RevoProject/web-build'
+        path: '.'
 
   deploy:
     environment:
