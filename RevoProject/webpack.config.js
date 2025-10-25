@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   mode: 'development',
@@ -51,6 +52,30 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/index.html',
       inject: true,
+    }),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: 'public/manifest.json',
+          to: 'manifest.json',
+        },
+        {
+          from: 'public/sw.js',
+          to: 'sw.js',
+        },
+        {
+          from: 'public/icon-192.png',
+          to: 'icon-192.png',
+        },
+        {
+          from: 'public/icon-512.png',
+          to: 'icon-512.png',
+        },
+        {
+          from: 'public/favicon.svg',
+          to: 'favicon.svg',
+        },
+      ],
     }),
     new webpack.ProvidePlugin({
       React: 'react',
