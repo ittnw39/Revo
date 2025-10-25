@@ -13,6 +13,13 @@ import { RootStackParamList } from '../../types/navigation';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 
+// 웹 환경에서 localStorage 사용을 위한 타입 선언
+declare const localStorage: {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 393;
 const screenHeight = 852;
@@ -89,9 +96,9 @@ const EmotionDetailScreen: FC = () => {
 
       {/* 하단 네비게이션 바 */}
       <NavigationBar 
-        onNavigateToRecords={() => navigation.navigate('MainTabs')} 
-        onNavigateToRecording={() => navigation.navigate('MainTabs')} 
-        onNavigateToProfile={() => navigation.navigate('MainTabs')}
+        onNavigateToRecords={() => navigation.navigate('Records')} 
+        onNavigateToRecording={() => navigation.navigate('Recording')} 
+        onNavigateToProfile={() => navigation.navigate('Profile')}
         currentPage="Recording"
       />
     </SafeAreaView>

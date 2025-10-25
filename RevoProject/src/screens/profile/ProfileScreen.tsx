@@ -9,9 +9,15 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MainTabParamList, RootStackParamList } from '../../types/navigation';
+import { RootStackParamList } from '../../types/navigation';
+
+// 웹 환경에서 localStorage 사용을 위한 타입 선언
+declare const localStorage: {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 
@@ -19,8 +25,7 @@ import Header from '../../components/Header';
 const screenWidth = 393;
 const screenHeight = 852;
 
-type ProfileScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Profile'> & 
-  NativeStackNavigationProp<RootStackParamList>;
+type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 
 const ProfileScreen: FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();

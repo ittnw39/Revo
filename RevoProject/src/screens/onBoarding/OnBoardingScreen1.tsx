@@ -20,17 +20,16 @@ import NormalCharacter from '../../components/characters/NormalCharacter';
 import ExciteCharacter from '../../components/characters/ExciteCharacter';
 import RevText from '../../components/characters/RevText';
 
+// 웹 환경에서 localStorage 사용을 위한 타입 선언
+declare const localStorage: {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 393;
 const screenHeight = 852;
-
-
-
-
-
-
-
-
 
 type OnBoardingScreen1NavigationProp = NativeStackNavigationProp<RootStackParamList, 'OnBoarding'>;
 

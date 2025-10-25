@@ -8,8 +8,15 @@ import {
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { MainTabParamList } from '../../types/navigation';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigation';
+
+// 웹 환경에서 localStorage 사용을 위한 타입 선언
+declare const localStorage: {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 
@@ -17,7 +24,7 @@ import Header from '../../components/Header';
 const screenWidth = 393;
 const screenHeight = 852;
 
-type RecordsScreenNavigationProp = BottomTabNavigationProp<MainTabParamList, 'Records'>;
+type RecordsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Records'>;
 
 const RecordsScreen: FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
