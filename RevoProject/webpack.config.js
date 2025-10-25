@@ -12,7 +12,7 @@ module.exports = {
     path: path.resolve(__dirname, 'web-build'),
     filename: '[name].js',
     chunkFilename: '[name].[contenthash].js',
-    publicPath: '/',
+    publicPath: './',
     clean: true,
   },
   resolve: {
