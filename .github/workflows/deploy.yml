@@ -36,7 +36,7 @@ jobs:
     - name: Build web app
       run: |
         cd RevoProject
-        npm run build:web
+        npm run build:github
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
@@ -44,7 +44,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: './RevoProject/web-build'
+        path: './RevoProject/docs'
 
   deploy:
     environment:
