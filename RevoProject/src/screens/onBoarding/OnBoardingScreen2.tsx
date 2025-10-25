@@ -108,7 +108,7 @@ const OnBoardingScreen2: FC = () => {
       // 온보딩 완료 시 로컬스토리지 정리
       localStorage.removeItem('onboardingStep');
       localStorage.setItem('onboardingCompleted', 'true');
-      navigation.navigate('Recording');
+    navigation.navigate('Recording');
     }
   };
 

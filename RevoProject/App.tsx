@@ -18,6 +18,7 @@ import RecordingScreen from './src/screens/recording/RecordingScreen';
 import RecordsScreen from './src/screens/records/RecordsScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import EmotionDetailScreen from './src/screens/emotionDetail/EmotionDetailScreen';
+import SettingsScreen from './src/screens/settings/SettingsScreen';
 
 // Navigation Types
 import { RootStackParamList } from './src/types/navigation';
@@ -50,6 +51,7 @@ function App() {
               presentation: 'modal',
             }}
           />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

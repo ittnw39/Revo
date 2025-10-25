@@ -46,7 +46,7 @@ const RecordsScreen: FC = () => {
       <View style={styles.frame} />
 
       {/* 상단 헤더 */}
-      <Header />
+      <Header currentScreen="Records" />
 
       {/* 이번주 날짜 표시 */}
       <View style={styles.weekContainer}>

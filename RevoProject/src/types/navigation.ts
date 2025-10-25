@@ -6,4 +6,5 @@ export type RootStackParamList = {
   Records: undefined;
   Profile: undefined;
   EmotionDetail: undefined;
+  Settings: undefined;
 };

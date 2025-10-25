@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   navigationBar: {
     position: 'absolute',
     left: 24,
-    top: 758,
+    bottom: 24,
     width: 345,
     height: 58,
     backgroundColor: '#2C2C2C',
