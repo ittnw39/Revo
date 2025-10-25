@@ -40,7 +40,13 @@ jobs:
         
     - name: Copy build files to root
       run: |
+        # web-build 폴더의 모든 파일을 루트로 복사
         cp -r RevoProject/web-build/* ./
+        # 복사된 파일들 확인
+        echo "=== Copied files ==="
+        ls -la
+        echo "=== PWA files ==="
+        ls -la manifest.json sw.js icon-*.png || echo "PWA files not found"
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
