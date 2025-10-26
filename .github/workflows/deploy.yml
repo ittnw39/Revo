@@ -47,6 +47,8 @@ jobs:
         ls -la
         echo "=== PWA files ==="
         ls -la manifest.json sw.js icon-*.png || echo "PWA files not found"
+        echo "=== Current directory ==="
+        pwd
         
     - name: Setup Pages
       uses: actions/configure-pages@v4

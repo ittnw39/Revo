@@ -2,7 +2,7 @@
   "name": "RevoProject - 감정 기록 앱",
   "short_name": "Revo",
   "description": "감정을 기록하고 관리하는 PWA 앱",
-  "start_url": "/",
+  "start_url": "/Revo/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#6366f1",
