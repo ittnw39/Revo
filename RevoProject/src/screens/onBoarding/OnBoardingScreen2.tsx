@@ -105,7 +105,7 @@ const OnBoardingScreen2: FC = () => {
       localStorage.removeItem('onboardingStep');
       // Context를 통해 온보딩 완료 상태 설정
       setOnboardingCompleted(true);
-      navigation.navigate('Recording');
+    navigation.navigate('Recording');
     }
   };
 

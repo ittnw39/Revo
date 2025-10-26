@@ -42,14 +42,22 @@ function App() {
 // 별도 컴포넌트로 분리하여 Context 사용 가능하게 함
 function AppNavigator() {
   const isDarkMode = useColorScheme() === 'dark';
-  const { isOnboardingCompleted } = useApp();
+  const { isOnboardingCompleted, lastVisitedScreen } = useApp();
+
+  // 초기 라우트 결정
+  const getInitialRoute = () => {
+    if (!isOnboardingCompleted) {
+      return "OnBoarding";
+    }
+    return lastVisitedScreen as keyof RootStackParamList;
+  };
 
   return (
     <SafeAreaProvider>
       <NavigationContainer>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <Stack.Navigator
-          initialRouteName={isOnboardingCompleted ? "Recording" : "OnBoarding"}
+          initialRouteName={getInitialRoute()}
           screenOptions={{
             headerShown: false,
           }}

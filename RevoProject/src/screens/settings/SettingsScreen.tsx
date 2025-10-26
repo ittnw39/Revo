@@ -8,6 +8,7 @@ import {
   StatusBar,
   ScrollView,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -24,6 +25,13 @@ declare const document: {
   removeEventListener: (event: string, handler: (e: any) => void) => void;
 };
 
+// 웹 환경에서 localStorage 사용을 위한 타입 선언
+declare const localStorage: {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 393;
 const screenHeight = 852;
@@ -32,21 +40,48 @@ type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList
 
 const SettingsScreen: FC = () => {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
-  const { isOnboardingCompleted } = useApp();
-  const [currentView, setCurrentView] = useState<'main' | 'accessibility'>('main');
-  const [accessibilityStep, setAccessibilityStep] = useState(0); // 0: 다크모드, 1: 글자크기, 2: 화면읽기, 3: 하이라이트, 4: 제스처설정
+  const { 
+    isOnboardingCompleted, 
+    setLastVisitedScreen, 
+    settingsView, 
+    setSettingsView, 
+    accessibilityStep, 
+    setAccessibilityStep 
+  } = useApp();
   const [selectedFontSize, setSelectedFontSize] = useState(20); // 선택된 글자 크기
   const [darkMode, setDarkMode] = useState(true); // 다크모드 설정
   const [screenRead, setScreenRead] = useState(false); // 화면 읽기 설정
   const [highlight, setHighlight] = useState(true); // 하이라이트 설정
+  // 제스처 설정은 Context에서 관리하지 않고 로컬 상태로 관리
   const [gesture, setGesture] = useState(false); // 제스처 설정
+  const [showGestureMenu, setShowGestureMenu] = useState(false); // 제스처 메뉴 표시 여부
+  const [selectedGestureAction, setSelectedGestureAction] = useState<string>(''); // 선택된 제스처 액션
+  const [showActionSelector, setShowActionSelector] = useState(false); // 액션 선택기 표시 여부
+  const [currentGestureType, setCurrentGestureType] = useState<string>(''); // 현재 선택된 제스처 타입
+  const [gestureActions, setGestureActions] = useState<{[key: string]: string}>({
+    doubleTap: '없음',
+    tripleTap: '없음', 
+    longPress: '없음',
+    newGesture: '없음'
+  }); // 제스처별 선택된 액션 저장
+  const [privacyStep, setPrivacyStep] = useState(0); // 프라이버시 단계 (0: 소음제거, 1: 목소리 증폭)
+  const [noiseReduction, setNoiseReduction] = useState(false); // 소음제거 설정
+  const [voiceAmplification, setVoiceAmplification] = useState(false); // 목소리 증폭 설정
+  const [notificationStep, setNotificationStep] = useState(0); // 알림 단계 (0: 알림설정, 1: 기록 알림)
+  const [notifications, setNotifications] = useState(false); // 알림 설정
+  const [recordNotifications, setRecordNotifications] = useState(false); // 기록 알림 설정
+  const [showDaySelector, setShowDaySelector] = useState(false); // 요일 선택기 표시 여부
+  const [selectedDays, setSelectedDays] = useState<string[]>([]); // 선택된 요일들
   
-  // 온보딩 완료 상태 확인
+  // 온보딩 완료 상태 확인 및 마지막 방문 화면 업데이트
   useEffect(() => {
     if (!isOnboardingCompleted) {
       navigation.navigate('OnBoarding');
+    } else {
+      // 설정 화면 진입 시 마지막 방문 화면을 Settings로 설정
+      setLastVisitedScreen('Settings');
     }
-  }, [isOnboardingCompleted, navigation]);
+  }, [isOnboardingCompleted, navigation, setLastVisitedScreen]);
   
   // 웹 환경에서 스와이프 핸들러
   const handleTouchStart = (e: any) => {
@@ -59,12 +94,30 @@ const SettingsScreen: FC = () => {
       const deltaX = currentX - startX;
       
       if (Math.abs(deltaX) > 50) {
-        if (deltaX > 0 && accessibilityStep > 0) {
-          // 오른쪽으로 스와이프 - 이전 단계
-          setAccessibilityStep(accessibilityStep - 1);
-        } else if (deltaX < 0 && accessibilityStep < 4) {
-          // 왼쪽으로 스와이프 - 다음 단계
-          setAccessibilityStep(accessibilityStep + 1);
+        if (settingsView === 'accessibility') {
+          if (deltaX > 0 && accessibilityStep > 0) {
+            // 오른쪽으로 스와이프 - 이전 단계
+            setAccessibilityStep(accessibilityStep - 1);
+          } else if (deltaX < 0 && accessibilityStep < 4) {
+            // 왼쪽으로 스와이프 - 다음 단계
+            setAccessibilityStep(accessibilityStep + 1);
+          }
+        } else if (settingsView === 'privacy') {
+          if (deltaX > 0 && privacyStep > 0) {
+            // 오른쪽으로 스와이프 - 이전 단계
+            setPrivacyStep(privacyStep - 1);
+          } else if (deltaX < 0 && privacyStep < 1) {
+            // 왼쪽으로 스와이프 - 다음 단계
+            setPrivacyStep(privacyStep + 1);
+          }
+        } else if (settingsView === 'notifications') {
+          if (deltaX > 0 && notificationStep > 0) {
+            // 오른쪽으로 스와이프 - 이전 단계
+            setNotificationStep(notificationStep - 1);
+          } else if (deltaX < 0 && notificationStep < 1) {
+            // 왼쪽으로 스와이프 - 다음 단계
+            setNotificationStep(notificationStep + 1);
+          }
         }
         
         // 이벤트 리스너 제거
@@ -105,22 +158,70 @@ const SettingsScreen: FC = () => {
       />
 
       {/* 접근성 화면 헤더 */}
-      {currentView === 'accessibility' && (
+      {settingsView === 'accessibility' && (
         <View style={styles.accessibilityHeader}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => setCurrentView('main')}
+            onPress={() => {
+              if (accessibilityStep === 4 && showGestureMenu) {
+                setShowGestureMenu(false);
+              } else {
+                setSettingsView('main');
+              }
+            }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
               <path d="M14 27L0.999999 14L14 0.999998" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </TouchableOpacity>
-          <Text style={styles.accessibilityTitle}>접근성</Text>
+          <Text style={styles.accessibilityTitle}>
+            {accessibilityStep === 4 && showGestureMenu ? '제스처 설정' : '접근성'}
+          </Text>
           <View style={styles.headerSpacer} />
         </View>
       )}
 
-      {currentView === 'main' ? (
+      {/* 프라이버시 화면 헤더 */}
+      {settingsView === 'privacy' && (
+        <View style={styles.accessibilityHeader}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => setSettingsView('main')}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+              <path d="M14 27L0.999999 14L14 0.999998" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </TouchableOpacity>
+          <Text style={styles.accessibilityTitle}>프라이버시</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      )}
+
+      {/* 알림/리마인더 화면 헤더 */}
+      {settingsView === 'notifications' && (
+        <View style={styles.accessibilityHeader}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => {
+              if (showDaySelector) {
+                setShowDaySelector(false);
+              } else {
+                setSettingsView('main');
+              }
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+              <path d="M14 27L0.999999 14L14 0.999998" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </TouchableOpacity>
+          <Text style={styles.accessibilityTitle}>
+            알림/리마인더
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      )}
+
+      {settingsView === 'main' ? (
         <>
           {/* 사용자 정보 */}
           <View style={styles.userInfoContainer}>
@@ -132,16 +233,22 @@ const SettingsScreen: FC = () => {
           <View style={styles.settingsList}>
             <TouchableOpacity 
               style={[styles.settingItem, { top: 0 }]}
-              onPress={() => setCurrentView('accessibility')}
+                onPress={() => setSettingsView('accessibility')}
             >
               <Text style={styles.settingItemText}>접근성</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.settingItem, { top: 81 }]}>
+            <TouchableOpacity 
+              style={[styles.settingItem, { top: 81 }]}
+              onPress={() => setSettingsView('privacy')}
+            >
               <Text style={styles.settingItemText}>프라이버시</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.settingItem, { top: 162 }]}>
+            <TouchableOpacity 
+              style={[styles.settingItem, { top: 162 }]}
+              onPress={() => setSettingsView('notifications')}
+            >
               <Text style={styles.settingItemText}>알림/리마인더</Text>
             </TouchableOpacity>
             
@@ -158,7 +265,7 @@ const SettingsScreen: FC = () => {
             </TouchableOpacity>
           </View>
         </>
-      ) : (
+      ) : settingsView === 'accessibility' ? (
         <>
           {/* 접근성 화면 */}
           <View 
@@ -246,27 +353,285 @@ const SettingsScreen: FC = () => {
             
             {accessibilityStep === 4 && (
               <>
-                <Text style={styles.gestureTitle}>제스처 설정</Text>
-                <Text style={styles.gestureDescription}>
-                 간단한 동작으로 주요{'\n'}기능을 실행할 수 있어요
+                {!showGestureMenu ? (
+                  <>
+                    <Text style={styles.gestureTitle}>제스처 설정</Text>
+                    <Text style={styles.gestureDescription}>
+                     간단한 동작으로 주요{'\n'}기능을 실행할 수 있어요
+                    </Text>
+                    
+                    
+                    <ToggleButton 
+                      isOn={gesture} 
+                      onToggle={(isOn) => {
+                        setGesture(isOn);
+                        if (isOn) {
+                          setShowGestureMenu(true);
+                        } else {
+                          setShowGestureMenu(false);
+                        }
+                      }} 
+                      top={324}
+                    />
+                  </>
+                ) : null}
+              </>
+            )}
+          </View>
+          
+          {/* 페이지바 - 제스처 메뉴가 표시될 때는 숨김 */}
+          {!showGestureMenu && (
+            <PageIndicator 
+              currentPage={accessibilityStep} 
+              totalPages={5} 
+              top={753}
+            />
+          )}
+        </>
+      ) : settingsView === 'privacy' ? (
+        <>
+          {/* 프라이버시 화면 */}
+          <View 
+            style={styles.accessibilityContainer}
+            onTouchStart={handleTouchStart}
+          >
+            {privacyStep === 0 && (
+              <>
+                <Text style={styles.darkModeTitle}>소음제거</Text>
+                <Text style={styles.darkModeDescription}>
+                외부 소음을 줄여,{'\n'}내 기록을 지켜줘요
                 </Text>
                 
                 <ToggleButton 
-                  isOn={gesture} 
-                  onToggle={setGesture} 
+                  isOn={noiseReduction} 
+                  onToggle={setNoiseReduction} 
+                  top={324}
+                />
+              </>
+            )}
+            
+            {privacyStep === 1 && (
+              <>
+                <Text style={styles.darkModeTitle}>목소리 증폭</Text>
+                <Text style={styles.darkModeDescription}>
+                잡음을 줄이고, 내 목소리만{'\n'}선명하게 기록해요
+                </Text>
+                
+                <ToggleButton 
+                  isOn={voiceAmplification} 
+                  onToggle={setVoiceAmplification} 
                   top={324}
                 />
               </>
             )}
           </View>
-          
+        
           {/* 페이지바 */}
           <PageIndicator 
-            currentPage={accessibilityStep} 
-            totalPages={5} 
+            currentPage={privacyStep} 
+            totalPages={2} 
             top={753}
           />
         </>
+      ) : settingsView === 'notifications' ? (
+        <>
+          {/* 알림/리마인더 화면 */}
+          <View 
+            style={styles.accessibilityContainer}
+            onTouchStart={handleTouchStart}
+          >
+            {notificationStep === 0 && (
+              <>
+                <Text style={styles.darkModeTitle}>알림설정</Text>
+                <Text style={styles.darkModeDescription}>
+                  소셜 알림을{'\n'}받아볼 수 있어요
+                </Text>
+                
+                <ToggleButton 
+                  isOn={notifications} 
+                  onToggle={setNotifications} 
+                  top={324}
+                />
+              </>
+            )}
+            
+            {notificationStep === 1 && !showDaySelector && (
+              <>
+                <Text style={styles.darkModeTitle}>기록 알림</Text>
+                <Text style={styles.darkModeDescription}>
+                  생활 패턴에 맞춰{'\n'}기록 시간을 알려드려요
+                </Text>
+                
+                <ToggleButton 
+                  isOn={recordNotifications} 
+                  onToggle={(isOn) => {
+                    setRecordNotifications(isOn);
+                    if (isOn) {
+                      setShowDaySelector(true);
+                    } else {
+                      setShowDaySelector(false);
+                    }
+                  }} 
+                  top={324}
+                />
+              </>
+            )}
+
+          </View>
+          
+          {/* 페이지바 - 요일 선택기가 표시될 때는 숨김 */}
+          {!showDaySelector && (
+            <PageIndicator 
+              currentPage={notificationStep} 
+              totalPages={2} 
+              top={753}
+            />
+          )}
+        </>
+      ) : null}
+
+      {/* 요일 선택기 - 알림 컨테이너 밖으로 이동 */}
+      {settingsView === 'notifications' && notificationStep === 1 && showDaySelector && (
+        <View style={styles.daySelectorContainer}>
+          {['일', '월', '화', '수', '목', '금', '토'].map((day, index) => (
+            <TouchableOpacity
+              key={day}
+              style={styles.daySelectorItem}
+              onPress={() => {
+                if (selectedDays.includes(day)) {
+                  setSelectedDays(selectedDays.filter(d => d !== day));
+                } else {
+                  setSelectedDays([...selectedDays, day]);
+                }
+              }}
+            >
+              <Text style={styles.daySelectorText}>{day}</Text>
+              <View style={styles.daySelectorIcon}>
+                {selectedDays.includes(day) && (
+                  <Svg width="15" height="28" viewBox="0 0 15 28" fill="none">
+                    <Path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </Svg>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* 제스처 메뉴 - 접근성 컨테이너 밖으로 이동 */}
+      {settingsView === 'accessibility' && accessibilityStep === 4 && showGestureMenu && (
+        <View style={styles.gestureMenuContainer}>
+          <TouchableOpacity 
+            style={[styles.gestureMenuItem, { height: 145 }]}
+            onPress={() => {
+              setCurrentGestureType('doubleTap');
+              setShowActionSelector(true);
+            }}
+          >
+            <Text style={styles.gestureMenuText}>두 번 탭</Text>
+            <View style={styles.gestureActionContainer}>
+              <Text style={[styles.gestureMenuAction, gestureActions.doubleTap !== '없음' && styles.selectedAction]}>
+                {gestureActions.doubleTap}
+              </Text>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+                <path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.gestureMenuItem, { height: 145 }]}
+            onPress={() => {
+              setCurrentGestureType('tripleTap');
+              setShowActionSelector(true);
+            }}
+          >
+            <Text style={styles.gestureMenuText}>세 번 탭</Text>
+            <View style={styles.gestureActionContainer}>
+              <Text style={[styles.gestureMenuAction, gestureActions.tripleTap !== '없음' && styles.selectedAction]}>
+                {gestureActions.tripleTap}
+              </Text>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+                <path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.gestureMenuItem, { height: 145 }]}
+            onPress={() => {
+              setCurrentGestureType('longPress');
+              setShowActionSelector(true);
+            }}
+          >
+            <Text style={styles.gestureMenuText}>길게 누르기</Text>
+            <View style={styles.gestureActionContainer}>
+              <Text style={[styles.gestureMenuAction, gestureActions.longPress !== '없음' && styles.selectedAction]}>
+                {gestureActions.longPress}
+              </Text>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+                <path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.gestureMenuItem, { height: 145 }]}
+            onPress={() => {
+              // 새로운 제스처 생성 기능 구현
+              console.log('새로운 제스처 생성');
+            }}
+          >
+            <Text style={styles.gestureMenuText}>새로운 제스처 생성</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* 액션 선택기 */}
+      {showActionSelector && (
+        <View style={styles.actionSelectorContainer}>
+          <View style={styles.actionSelectorHeader}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => {
+                setShowActionSelector(false);
+                setCurrentGestureType('');
+              }}
+            >
+              <svg width="15" height="28" viewBox="0 0 15 28" fill="none">
+                <path d="M14 27L0.999999 14L14 0.999998" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </TouchableOpacity>
+            <Text style={styles.actionSelectorTitle}>제스처 설정</Text>
+            <View style={styles.spacer} />
+          </View>
+
+          <View style={styles.actionListContainer}>
+            {['없음', '녹음 시작', '녹음 종료', '내기록 이동', '피드 이동', '아카이브 이동', '설정창 이동'].map((action, index) => (
+              <TouchableOpacity 
+                key={action}
+                style={[
+                  styles.actionItem,
+                  gestureActions[currentGestureType] === action && styles.selectedActionItem
+                ]}
+                onPress={() => {
+                  setGestureActions(prev => ({
+                    ...prev,
+                    [currentGestureType]: action
+                  }));
+                  setShowActionSelector(false);
+                }}
+              >
+                <Text style={[
+                  styles.actionText,
+                  gestureActions[currentGestureType] === action && styles.selectedActionText
+                ]}>
+                  {action}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       )}
 
       {/* 하단 네비게이션 바 */}
@@ -376,13 +741,15 @@ const styles = StyleSheet.create({
   },
   darkModeTitle: {
     position: 'absolute',
-    left: 48,
+    left: 0,
+    right: 0,
     top: 112,
     color: '#F5F5F5',
     fontSize: 60,
     fontWeight: '700',
     letterSpacing: 1.2,
     lineHeight: 90,
+    textAlign: 'center',
   },
   darkModeDescription: {
     position: 'absolute',
@@ -533,6 +900,199 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 0.56,
     lineHeight: 42,
+  },
+  // 제스처 상세 설정 스타일
+  gestureDetailContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#000000',
+  },
+  gestureDetailHeader: {
+    position: 'absolute',
+    left: 16,
+    top: 118,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gestureDetailTitle: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.8,
+    lineHeight: 60,
+    flex: 1,
+    textAlign: 'center',
+  },
+  spacer: {
+    width: 15,
+  },
+  gestureMenuHeader: {
+    position: 'absolute',
+    left: 16,
+    top: 118,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  gestureMenuTitle: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.8,
+    lineHeight: 60,
+    flex: 1,
+    textAlign: 'center',
+  },
+  gestureMenuContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 198,
+  },
+  gestureMenuItem: {
+    backgroundColor: '#3A3A3A',
+    borderWidth: 1,
+    borderColor: '#555555',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginBottom: 0,
+  },
+  gestureMenuText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.56,
+    lineHeight: 42,
+  },
+  gestureActionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  gestureMenuAction: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.56,
+    lineHeight: 42,
+  },
+  selectedAction: {
+    color: '#B780FF',
+  },
+  // 선택된 액션 표시 스타일
+  selectedActionsContainer: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  selectedActionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#3A3A3A',
+    borderWidth: 1,
+    borderColor: '#555555',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  gestureTypeText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#F5F5F5',
+  },
+  selectedActionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#B780FF',
+  },
+  // 액션 선택기 스타일
+  actionSelectorContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#000000',
+  },
+  actionSelectorHeader: {
+    position: 'absolute',
+    left: 16,
+    top: 118,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  actionSelectorTitle: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.8,
+    lineHeight: 60,
+    flex: 1,
+    textAlign: 'center',
+  },
+  actionListContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 198,
+  },
+  actionItem: {
+    height: 81,
+    backgroundColor: '#3A3A3A',
+    borderWidth: 1,
+    borderColor: '#555555',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  actionText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.56,
+    lineHeight: 42,
+  },
+  // 요일 선택기 스타일
+  daySelectorContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 198,
+  },
+  daySelectorItem: {
+    height: 81,
+    backgroundColor: '#3A3A3A',
+    borderWidth: 1,
+    borderColor: '#555555',
+    width: 393,
+    alignSelf: 'center',
+    marginBottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+  },
+  daySelectorText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.56,
+  },
+  daySelectorIcon: {
+    width: 15,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
