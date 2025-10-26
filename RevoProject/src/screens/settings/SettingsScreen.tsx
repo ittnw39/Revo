@@ -221,6 +221,24 @@ const SettingsScreen: FC = () => {
         </View>
       )}
 
+      {/* 기타 화면 헤더 */}
+      {settingsView === 'etc' && (
+        <View style={styles.accessibilityHeader}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => setSettingsView('main')}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+              <path d="M14 27L0.999999 14L14 0.999998" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </TouchableOpacity>
+          <Text style={styles.accessibilityTitle}>
+            기타
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      )}
+
       {settingsView === 'main' ? (
         <>
           {/* 사용자 정보 */}
@@ -256,7 +274,10 @@ const SettingsScreen: FC = () => {
               <Text style={styles.settingItemText}>친구설정</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.settingItem, { top: 324 }]}>
+            <TouchableOpacity 
+              style={[styles.settingItem, { top: 324 }]}
+              onPress={() => setSettingsView('etc')}
+            >
               <Text style={styles.settingItemText}>기타</Text>
             </TouchableOpacity>
             
@@ -487,6 +508,37 @@ const SettingsScreen: FC = () => {
               top={753}
             />
           )}
+        </>
+      ) : settingsView === 'etc' ? (
+        <>
+          {/* 기타 화면 */}
+          <View style={[styles.accessibilityContainer, { top: 198 }]}>
+            {/* 고객센터 카드 */}
+            <TouchableOpacity style={styles.etcCard}>
+              <Text style={styles.etcCardTitle}>고객센터</Text>
+              <Text style={styles.etcCardDescription}>
+                궁금한 점이나 불편 사항을{'\n'}언제든지 문의하세요
+              </Text>
+              <View style={styles.etcCardIcon}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+                  <path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </View>
+            </TouchableOpacity>
+
+            {/* 이용백서 카드 */}
+            <TouchableOpacity style={[styles.etcCard, { top: 262 }]}>
+              <Text style={styles.etcCardTitle}>이용백서</Text>
+              <Text style={styles.etcCardDescription}>
+                앱의 주요 기능과 사용{'\n'}방법을 한눈에 확인할 수{'\n'}있어요
+              </Text>
+              <View style={styles.etcCardIcon}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+                  <path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </View>
+            </TouchableOpacity>
+          </View>
         </>
       ) : null}
 
@@ -1089,6 +1141,43 @@ const styles = StyleSheet.create({
     letterSpacing: 0.56,
   },
   daySelectorIcon: {
+    width: 15,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // 기타 화면 스타일
+  etcCard: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 262,
+    backgroundColor: '#3A3A3A',
+    borderWidth: 1,
+    borderColor: '#555555',
+    marginHorizontal: 0,
+    paddingHorizontal: 24,
+    paddingTop: 32,
+  },
+  etcCardTitle: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.8,
+    marginBottom: 16,
+  },
+  etcCardDescription: {
+    fontSize: 28,
+    fontWeight: '500',
+    color: '#F5F5F5',
+    letterSpacing: 0.56,
+    lineHeight: 42,
+  },
+  etcCardIcon: {
+    position: 'absolute',
+    right: 48,
+    top: 32,
     width: 15,
     height: 28,
     justifyContent: 'center',
