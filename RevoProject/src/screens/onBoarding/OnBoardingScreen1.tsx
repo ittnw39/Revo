@@ -20,12 +20,7 @@ import NormalCharacter from '../../components/characters/NormalCharacter';
 import ExciteCharacter from '../../components/characters/ExciteCharacter';
 import RevText from '../../components/characters/RevText';
 
-// 웹 환경에서 localStorage 사용을 위한 타입 선언
-declare const localStorage: {
-  getItem: (key: string) => string | null;
-  setItem: (key: string, value: string) => void;
-  removeItem: (key: string) => void;
-};
+import { useApp } from '../../contexts/AppContext';
 
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 393;
@@ -35,15 +30,14 @@ type OnBoardingScreen1NavigationProp = NativeStackNavigationProp<RootStackParamL
 
 const OnBoardingScreen1: FC = () => {
   const navigation = useNavigation<OnBoardingScreen1NavigationProp>();
+  const { isOnboardingCompleted } = useApp();
   
-  // 로컬스토리지에서 온보딩 완료 상태 확인
+  // 온보딩 완료 상태 확인
   useEffect(() => {
-    const isOnboardingCompleted = localStorage.getItem('onboardingCompleted');
-    if (isOnboardingCompleted === 'true') {
-      // 온보딩이 완료된 경우 메인 화면으로 이동
+    if (isOnboardingCompleted) {
       navigation.navigate('Recording');
     }
-  }, [navigation]);
+  }, [isOnboardingCompleted, navigation]);
   
   // 해피 캐릭터 애니메이션 상태
   const [isHappyPressed, setIsHappyPressed] = useState(false);

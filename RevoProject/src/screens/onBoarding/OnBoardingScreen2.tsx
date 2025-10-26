@@ -16,12 +16,7 @@ import AngryCharacter from '../../components/characters/AngryCharacter';
 import NormalCharacter from '../../components/characters/NormalCharacter';
 import ExciteCharacter from '../../components/characters/ExciteCharacter';
 
-// 웹 환경에서 localStorage 사용을 위한 타입 선언
-declare const localStorage: {
-  getItem: (key: string) => string | null;
-  setItem: (key: string, value: string) => void;
-  removeItem: (key: string) => void;
-};
+import { useApp } from '../../contexts/AppContext';
 
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 393;
@@ -31,6 +26,7 @@ type OnBoardingScreen2NavigationProp = NativeStackNavigationProp<RootStackParamL
 
 const OnBoardingScreen2: FC = () => {
   const navigation = useNavigation<OnBoardingScreen2NavigationProp>();
+  const { setOnboardingCompleted } = useApp();
   const [name, setName] = useState('감자');
   const [currentStep, setCurrentStep] = useState(1); // 1: 이름, 2: 녹음설정, 3: 음성설정, 4: 제스처설정, 5: GPS설정, 6: 알람설정, 7: 설정완료
   const [recordingEnabled, setRecordingEnabled] = useState(false);
@@ -107,8 +103,9 @@ const OnBoardingScreen2: FC = () => {
     } else {
       // 온보딩 완료 시 로컬스토리지 정리
       localStorage.removeItem('onboardingStep');
-      localStorage.setItem('onboardingCompleted', 'true');
-    navigation.navigate('Recording');
+      // Context를 통해 온보딩 완료 상태 설정
+      setOnboardingCompleted(true);
+      navigation.navigate('Recording');
     }
   };
 

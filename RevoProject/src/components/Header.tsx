@@ -4,6 +4,17 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 
+// 웹에서 Safe Area 감지
+const getSafeAreaTop = () => {
+  if (Platform.OS === 'web') {
+    // CSS env() 함수로 Safe Area 감지
+    const safeAreaTop = getComputedStyle(document.documentElement)
+      .getPropertyValue('--safe-area-inset-top') || '44px';
+    return parseInt(safeAreaTop.replace('px', '')) || 44;
+  }
+  return Platform.OS === 'ios' ? 44 : 20;
+};
+
 interface HeaderProps {
   hideOnOnboarding?: boolean;
   currentScreen?: string;
@@ -50,7 +61,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 44 : 20, // iOS: 44px, Android: 20px
+    paddingTop: getSafeAreaTop(), // Safe Area 자동 감지
     zIndex: 1000,
   },
   logoText: {

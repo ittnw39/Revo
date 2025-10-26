@@ -16,12 +16,7 @@ import Header from '../../components/Header';
 import PageIndicator from '../../components/PageIndicator';
 import ToggleButton from '../../components/ToggleButton';
 
-// 웹 환경에서 localStorage 사용을 위한 타입 선언
-declare const localStorage: {
-  getItem: (key: string) => string | null;
-  setItem: (key: string, value: string) => void;
-  removeItem: (key: string) => void;
-};
+import { useApp } from '../../contexts/AppContext';
 
 // 웹 환경에서 document 사용을 위한 타입 선언
 declare const document: {
@@ -37,6 +32,7 @@ type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList
 
 const SettingsScreen: FC = () => {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
+  const { isOnboardingCompleted } = useApp();
   const [currentView, setCurrentView] = useState<'main' | 'accessibility'>('main');
   const [accessibilityStep, setAccessibilityStep] = useState(0); // 0: 다크모드, 1: 글자크기, 2: 화면읽기, 3: 하이라이트, 4: 제스처설정
   const [selectedFontSize, setSelectedFontSize] = useState(20); // 선택된 글자 크기
@@ -44,6 +40,13 @@ const SettingsScreen: FC = () => {
   const [screenRead, setScreenRead] = useState(false); // 화면 읽기 설정
   const [highlight, setHighlight] = useState(true); // 하이라이트 설정
   const [gesture, setGesture] = useState(false); // 제스처 설정
+  
+  // 온보딩 완료 상태 확인
+  useEffect(() => {
+    if (!isOnboardingCompleted) {
+      navigation.navigate('OnBoarding');
+    }
+  }, [isOnboardingCompleted, navigation]);
   
   // 웹 환경에서 스와이프 핸들러
   const handleTouchStart = (e: any) => {

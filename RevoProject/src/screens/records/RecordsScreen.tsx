@@ -11,12 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 
-// 웹 환경에서 localStorage 사용을 위한 타입 선언
-declare const localStorage: {
-  getItem: (key: string) => string | null;
-  setItem: (key: string, value: string) => void;
-  removeItem: (key: string) => void;
-};
+import { useApp } from '../../contexts/AppContext';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 
@@ -28,15 +23,14 @@ type RecordsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 
 const RecordsScreen: FC = () => {
   const navigation = useNavigation<RecordsScreenNavigationProp>();
+  const { isOnboardingCompleted } = useApp();
   
-  // 로컬스토리지에서 온보딩 완료 상태 확인
+  // 온보딩 완료 상태 확인
   useEffect(() => {
-    const isOnboardingCompleted = localStorage.getItem('onboardingCompleted');
-    if (isOnboardingCompleted !== 'true') {
-      // 온보딩이 완료되지 않은 경우 온보딩 화면으로 이동
+    if (!isOnboardingCompleted) {
       navigation.navigate('OnBoarding');
     }
-  }, [navigation]);
+  }, [isOnboardingCompleted, navigation]);
   
   return (
     <SafeAreaView style={styles.container}>

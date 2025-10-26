@@ -11,6 +11,9 @@ import {
   SafeAreaProvider,
 } from 'react-native-safe-area-context';
 
+// Context
+import { AppProvider, useApp } from './src/contexts/AppContext';
+
 // Screens
 import OnBoardingScreen1 from './src/screens/onBoarding/OnBoardingScreen1';
 import OnBoardingScreen2 from './src/screens/onBoarding/OnBoardingScreen2';
@@ -30,32 +33,44 @@ function App() {
   const isDarkMode = useColorScheme() === 'dark';
 
   return (
+    <AppProvider>
+      <AppNavigator />
+    </AppProvider>
+  );
+}
+
+// 별도 컴포넌트로 분리하여 Context 사용 가능하게 함
+function AppNavigator() {
+  const isDarkMode = useColorScheme() === 'dark';
+  const { isOnboardingCompleted } = useApp();
+
+  return (
     <SafeAreaProvider>
       <NavigationContainer>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <Stack.Navigator
-          initialRouteName="OnBoarding"
+          initialRouteName={isOnboardingCompleted ? "Recording" : "OnBoarding"}
           screenOptions={{
             headerShown: false,
           }}
         >
-          <Stack.Screen name="OnBoarding" component={OnBoardingScreen1} />
-          <Stack.Screen name="OnBoarding2" component={OnBoardingScreen2} />
-          <Stack.Screen name="Recording" component={RecordingScreen} />
-          <Stack.Screen name="Records" component={RecordsScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen 
-            name="EmotionDetail" 
-            component={EmotionDetailScreen}
-            options={{
-              presentation: 'modal',
-            }}
-          />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
-  );
+            <Stack.Screen name="OnBoarding" component={OnBoardingScreen1} />
+            <Stack.Screen name="OnBoarding2" component={OnBoardingScreen2} />
+            <Stack.Screen name="Recording" component={RecordingScreen} />
+            <Stack.Screen name="Records" component={RecordsScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen 
+              name="EmotionDetail" 
+              component={EmotionDetailScreen}
+              options={{
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    );
 }
 
 export default App;
