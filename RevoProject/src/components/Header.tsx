@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -45,11 +45,13 @@ const styles = StyleSheet.create({
   header: {
     position: 'absolute',
     left: 16,
-    top: 68,
+    top: 0,
     right: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 44 : 20, // iOS: 44px, Android: 20px
+    zIndex: 1000,
   },
   logoText: {
     color: '#B780FF',

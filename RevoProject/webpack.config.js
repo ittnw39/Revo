@@ -3,6 +3,10 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
+// 환경에 따른 publicPath 설정
+const isProduction = process.env.NODE_ENV === 'production';
+const publicPath = isProduction ? '/Revo/' : '/';
+
 module.exports = {
   mode: 'development',
   entry: {
@@ -12,7 +16,7 @@ module.exports = {
     path: path.resolve(__dirname, 'web-build'),
     filename: '[name].js',
     chunkFilename: '[name].[contenthash].js',
-    publicPath: './',
+    publicPath: publicPath,
     clean: true,
   },
   resolve: {

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>RevoProject - 감정 기록 앱</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     
@@ -12,7 +12,7 @@
     <!-- iOS PWA 설정 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Revo">
+    <meta name="apple-mobile-web-app-title" content="Rev_O">
     <link rel="apple-touch-icon" href="/Revo/icon-192.png">
     
     <!-- PWA 테마 색상 -->
@@ -26,7 +26,11 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/Revo/sw.js')
+          // 환경에 따라 경로 자동 설정
+          const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+          const swPath = isLocalhost ? './sw.js' : '/Revo/sw.js';
+          
+          navigator.serviceWorker.register(swPath)
             .then((registration) => {
               console.log('SW registered: ', registration);
             })
