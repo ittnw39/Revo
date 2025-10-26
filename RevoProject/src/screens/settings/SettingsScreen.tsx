@@ -46,7 +46,8 @@ const SettingsScreen: FC = () => {
     settingsView, 
     setSettingsView, 
     accessibilityStep, 
-    setAccessibilityStep 
+    setAccessibilityStep,
+    setOnboardingCompleted
   } = useApp();
   const [selectedFontSize, setSelectedFontSize] = useState(20); // 선택된 글자 크기
   const [darkMode, setDarkMode] = useState(true); // 다크모드 설정
@@ -281,7 +282,13 @@ const SettingsScreen: FC = () => {
               <Text style={styles.settingItemText}>기타</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.logoutItem}>
+            <TouchableOpacity 
+              style={styles.logoutItem}
+              onPress={() => {
+                setOnboardingCompleted(false);
+                navigation.navigate('OnBoarding');
+              }}
+            >
               <Text style={styles.logoutText}>로그아웃</Text>
             </TouchableOpacity>
           </View>
