@@ -36,7 +36,7 @@ jobs:
     - name: Build web app
       run: |
         cd RevoProject
-        npm run build:web
+        NODE_ENV=production npm run build:web
         
     - name: Copy build files to root
       run: |
