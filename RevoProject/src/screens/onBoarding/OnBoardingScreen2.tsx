@@ -70,7 +70,7 @@ const OnBoardingScreen2: FC = () => {
     const saveStep = () => {
       try {
         if (Platform.OS === 'web') {
-          localStorage.setItem('onboardingStep', currentStep.toString());
+    localStorage.setItem('onboardingStep', currentStep.toString());
         }
       } catch (error) {
         console.log('Error saving onboarding step:', error);
@@ -91,20 +91,23 @@ const OnBoardingScreen2: FC = () => {
   const totalSteps = 7;
   const progressWidth = (currentStep / totalSteps) * 316;
 
-  // 캐릭터 회전 애니메이션 함수들 - 연속적으로 반시계방향과 시계방향으로 왔다갔다 하는 애니메이션
+  // 캐릭터 회전 애니메이션 함수들 - 연속적으로 반시계방향과 시계방향으로 왔다갔다 하는 애니메이션 (최대 10도)
   const createRotationAnimation = (animatedValue: Animated.Value, direction: 'clockwise' | 'counterclockwise', duration: number) => {
+    // 초기값을 0으로 설정
+    animatedValue.setValue(0);
+    
     return Animated.loop(
       Animated.sequence([
-        // 시계방향으로 회전
-        Animated.timing(animatedValue, {
-          toValue: 0.3,
-          duration: duration,
-          useNativeDriver: true,
+        // 시계방향으로 회전 (10도)
+      Animated.timing(animatedValue, {
+          toValue: 0.1,
+        duration: duration,
+        useNativeDriver: true,
           easing: Easing.linear,
         }),
-        // 반시계방향으로 회전
+        // 반시계방향으로 회전 (-10도)
         Animated.timing(animatedValue, {
-          toValue: -0.3,
+          toValue: -0.1,
           duration: duration,
           useNativeDriver: true,
           easing: Easing.linear,
@@ -116,13 +119,195 @@ const OnBoardingScreen2: FC = () => {
   // 설정완료 화면에서만 애니메이션 시작
   useEffect(() => {
     if (currentStep === 7) {
-      // 모든 캐릭터를 600ms로 일정한 속도의 애니메이션
-      const happyAnim = createRotationAnimation(happyRotation, 'clockwise', 600);
-      const sadAnim = createRotationAnimation(sadRotation, 'counterclockwise', 600);
-      const embarrassedAnim = createRotationAnimation(embarrassedRotation, 'clockwise', 600);
-      const angryAnim = createRotationAnimation(angryRotation, 'counterclockwise', 600);
-      const normalAnim = createRotationAnimation(normalRotation, 'clockwise', 600);
-      const exciteAnim = createRotationAnimation(exciteRotation, 'counterclockwise', 600);
+      // 각 캐릭터마다 다른 타이밍으로 애니메이션
+      // Happy 캐릭터는 원본 -> 시계 -> 원본 -> 반시계 -> 원본 -> 시계 반복
+      happyRotation.setValue(0);
+      const happyAnim = Animated.loop(
+        Animated.sequence([
+          // 원본에서 시계방향 10도로
+          Animated.timing(happyRotation, {
+            toValue: 0.1,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 시계방향 10도에서 원본으로
+          Animated.timing(happyRotation, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 원본에서 반시계방향 -10도로
+          Animated.timing(happyRotation, {
+            toValue: -0.1,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 반시계방향 -10도에서 원본으로
+          Animated.timing(happyRotation, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          })
+        ])
+      );
+      // Sad 캐릭터는 원본 각도 -> 시계방향 10도 -> 원본 각도로 반복
+      sadRotation.setValue(0);
+      const sadAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(sadRotation, {
+            toValue: 0.1, // 시계방향 10도
+            duration: 700,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          Animated.timing(sadRotation, {
+            toValue: 0, // 원본 각도로 복귀
+            duration: 700,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          })
+        ])
+      );
+      // Embarrassed 캐릭터는 원본 -> 시계 -> 원본 -> 반시계 -> 원본 반복
+      embarrassedRotation.setValue(0);
+      const embarrassedAnim = Animated.loop(
+        Animated.sequence([
+          // 원본에서 시계방향 10도로
+          Animated.timing(embarrassedRotation, {
+            toValue: 0.1,
+            duration: 550,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 시계방향 10도에서 원본으로
+          Animated.timing(embarrassedRotation, {
+            toValue: 0,
+            duration: 550,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 원본에서 반시계방향 -10도로
+          Animated.timing(embarrassedRotation, {
+            toValue: -0.1,
+            duration: 550,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 반시계방향 -10도에서 원본으로 (속도 2배)
+          Animated.timing(embarrassedRotation, {
+            toValue: 0,
+            duration: 275, // 550ms의 절반 (2배 빠름)
+            useNativeDriver: true,
+            easing: Easing.linear,
+          })
+        ])
+      );
+      // Angry 캐릭터는 원본 -> 시계 -> 원본 -> 반시계 -> 원본 반복
+      angryRotation.setValue(0);
+      const angryAnim = Animated.loop(
+        Animated.sequence([
+          // 원본에서 시계방향 10도로
+          Animated.timing(angryRotation, {
+            toValue: 0.1,
+            duration: 650,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 시계방향 10도에서 원본으로
+          Animated.timing(angryRotation, {
+            toValue: 0,
+            duration: 650,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 원본에서 반시계방향 -10도로
+          Animated.timing(angryRotation, {
+            toValue: -0.1,
+            duration: 650,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 반시계방향 -10도에서 원본으로 (속도 2배)
+          Animated.timing(angryRotation, {
+            toValue: 0,
+            duration: 325, // 650ms의 절반 (2배 빠름)
+            useNativeDriver: true,
+            easing: Easing.linear,
+          })
+        ])
+      );
+      // Normal 캐릭터는 원본 -> 시계 -> 원본 -> 반시계 -> 원본 반복
+      normalRotation.setValue(0);
+      const normalAnim = Animated.loop(
+        Animated.sequence([
+          // 원본에서 시계방향 10도로
+          Animated.timing(normalRotation, {
+            toValue: 0.1,
+            duration: 600,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 시계방향 10도에서 원본으로
+          Animated.timing(normalRotation, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 원본에서 반시계방향 -10도로
+          Animated.timing(normalRotation, {
+            toValue: -0.1,
+            duration: 600,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 반시계방향 -10도에서 원본으로
+          Animated.timing(normalRotation, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          })
+        ])
+      );
+      // Excite 캐릭터는 원본 -> 반시계 -> 원본 -> 시계 -> 원본 반복
+      exciteRotation.setValue(0);
+      const exciteAnim = Animated.loop(
+        Animated.sequence([
+          // 원본에서 반시계방향 -10도로
+          Animated.timing(exciteRotation, {
+            toValue: -0.1,
+            duration: 580,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 반시계방향 -10도에서 원본으로 (속도 2배)
+          Animated.timing(exciteRotation, {
+            toValue: 0,
+            duration: 290, // 580ms의 절반 (2배 빠름)
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 원본에서 시계방향 10도로
+          Animated.timing(exciteRotation, {
+            toValue: 0.1,
+            duration: 580,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          }),
+          // 시계방향 10도에서 원본으로
+          Animated.timing(exciteRotation, {
+            toValue: 0,
+            duration: 580,
+            useNativeDriver: true,
+            easing: Easing.linear,
+          })
+        ])
+      );
 
       // 모든 애니메이션 시작
       happyAnim.start();
@@ -148,14 +333,14 @@ const OnBoardingScreen2: FC = () => {
     if (currentStep < totalSteps) {
       // 색 변화를 보여주기 위해 잠시 대기 후 다음 단계로 진행
       setTimeout(() => {
-        setCurrentStep(currentStep + 1);
+      setCurrentStep(currentStep + 1);
       }, 300);
     } else {
       // 온보딩 완료 시 저장소 정리
       const clearOnboardingData = () => {
         try {
           if (Platform.OS === 'web') {
-            localStorage.removeItem('onboardingStep');
+      localStorage.removeItem('onboardingStep');
           }
         } catch (error) {
           console.log('Error clearing onboarding data:', error);
@@ -165,7 +350,7 @@ const OnBoardingScreen2: FC = () => {
       clearOnboardingData();
       // Context를 통해 온보딩 완료 상태 설정
       setOnboardingCompleted(true);
-      navigation.navigate('Recording');
+    navigation.navigate('Recording');
     }
   };
 
@@ -437,46 +622,46 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: happyRotation.interpolate({
-                    inputRange: [-0.3, 0.3],
-                    outputRange: ['-8deg', '8deg']
+                    inputRange: [-0.1, 0.1],
+                    outputRange: ['-10deg', '10deg']
                   })
                 }]
               }
             ]}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="136" height="164" viewBox="0 0 136 164" fill="none">
-              <circle cx="81.7008" cy="81.7008" r="81.7008" fill="#FED046"/>
-              <circle cx="40.1473" cy="63.2802" r="16.5238" fill="#F5F5F5"/>
-              <circle cx="74.6014" cy="63.2802" r="16.5238" fill="#F5F5F5"/>
-              <mask id="mask0_597_105" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="23" y="46" width="34" height="34">
-                <circle cx="40.1478" cy="63.2802" r="16.5238" fill="#F5F5F5"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="189" height="196" viewBox="0 0 189 196" fill="none">
+              <circle cx="94.7008" cy="97.7008" r="81.7008" fill="#FED046"/>
+              <circle cx="53.1473" cy="79.2802" r="16.5238" fill="#F5F5F5"/>
+              <circle cx="87.6014" cy="79.2802" r="16.5238" fill="#F5F5F5"/>
+              <mask id="mask0_294_321" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="36" y="62" width="34" height="34">
+                <circle cx="53.1478" cy="79.2802" r="16.5238" fill="#F5F5F5"/>
               </mask>
-              <g mask="url(#mask0_597_105)">
-                <circle cx="26.3699" cy="63.2812" r="16.5247" fill="#0A0A0A"/>
+              <g mask="url(#mask0_294_321)">
+                <circle cx="39.3699" cy="79.2812" r="16.5247" fill="#0A0A0A"/>
               </g>
-              <mask id="mask1_597_105" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="58" y="46" width="34" height="34">
-                <circle cx="74.6009" cy="63.2802" r="16.5238" fill="#F5F5F5"/>
+              <mask id="mask1_294_321" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="71" y="62" width="34" height="34">
+                <circle cx="87.6009" cy="79.2802" r="16.5238" fill="#F5F5F5"/>
               </mask>
-              <g mask="url(#mask1_597_105)">
-                <circle cx="60.8201" cy="63.2812" r="16.5247" fill="#0A0A0A"/>
+              <g mask="url(#mask1_294_321)">
+                <circle cx="73.8201" cy="79.2812" r="16.5247" fill="#0A0A0A"/>
               </g>
-              <circle cx="40.1473" cy="63.2802" r="16.5238" fill="#F5F5F5"/>
-              <circle cx="74.6014" cy="63.2802" r="16.5238" fill="#F5F5F5"/>
-              <mask id="mask2_597_105" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="23" y="46" width="34" height="34">
-                <circle cx="40.1478" cy="63.2802" r="16.5238" fill="#F5F5F5"/>
+              <circle cx="53.1473" cy="79.2802" r="16.5238" fill="#F5F5F5"/>
+              <circle cx="87.6014" cy="79.2802" r="16.5238" fill="#F5F5F5"/>
+              <mask id="mask2_294_321" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="36" y="62" width="34" height="34">
+                <circle cx="53.1478" cy="79.2802" r="16.5238" fill="#F5F5F5"/>
               </mask>
-              <g mask="url(#mask2_597_105)">
-                <circle cx="26.3699" cy="63.2812" r="16.5247" fill="#0A0A0A"/>
+              <g mask="url(#mask2_294_321)">
+                <circle cx="39.3699" cy="79.2812" r="16.5247" fill="#0A0A0A"/>
               </g>
-              <mask id="mask3_597_105" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="58" y="46" width="34" height="34">
-                <circle cx="74.6009" cy="63.2802" r="16.5238" fill="#F5F5F5"/>
+              <mask id="mask3_294_321" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="71" y="62" width="34" height="34">
+                <circle cx="87.6009" cy="79.2802" r="16.5238" fill="#F5F5F5"/>
               </mask>
-              <g mask="url(#mask3_597_105)">
-                <circle cx="60.8201" cy="63.2812" r="16.5247" fill="#0A0A0A"/>
+              <g mask="url(#mask3_294_321)">
+                <circle cx="73.8201" cy="79.2812" r="16.5247" fill="#0A0A0A"/>
               </g>
-              <path d="M52.1714 79.7321C52.1714 84.6538 61.0305 84.8999 61.0305 79.7321" stroke="#0A0A0A" strokeWidth="2.57207" strokeLinecap="round"/>
-              <path d="M46.2644 66.1974C46.2644 67.3069 45.8237 68.371 45.0391 69.1556C44.2545 69.9401 43.1905 70.3809 42.0809 70.3809C40.9714 70.3809 39.9073 69.9401 39.1228 69.1556C38.3382 68.371 37.8975 67.3069 37.8975 66.1974L42.0809 66.1974H46.2644Z" fill="#F5F5F5"/>
-              <path d="M80.7175 66.1974C80.7175 67.3069 80.2768 68.371 79.4922 69.1556C78.7077 69.9401 77.6436 70.3809 76.5341 70.3809C75.4245 70.3809 74.3605 69.9401 73.5759 69.1556C72.7913 68.371 72.3506 67.3069 72.3506 66.1974L76.5341 66.1974H80.7175Z" fill="#F5F5F5"/>
+              <path d="M65.1714 95.7321C65.1714 100.654 74.0305 100.9 74.0305 95.7321" stroke="#0A0A0A" strokeWidth="2.57207" strokeLinecap="round"/>
+              <path d="M59.2644 82.1974C59.2644 83.3069 58.8237 84.371 58.0391 85.1556C57.2545 85.9401 56.1905 86.3809 55.0809 86.3809C53.9714 86.3809 52.9073 85.9401 52.1228 85.1556C51.3382 84.371 50.8975 83.3069 50.8975 82.1974L55.0809 82.1974H59.2644Z" fill="#F5F5F5"/>
+              <path d="M93.7175 82.1974C93.7175 83.3069 93.2768 84.371 92.4922 85.1556C91.7077 85.9401 90.6436 86.3809 89.5341 86.3809C88.4245 86.3809 87.3605 85.9401 86.5759 85.1556C85.7913 84.371 85.3506 83.3069 85.3506 82.1974L89.5341 82.1974H93.7175Z" fill="#F5F5F5"/>
             </svg>
           </Animated.View>
           <Animated.View 
@@ -485,34 +670,34 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: sadRotation.interpolate({
-                    inputRange: [-0.3, 0.3],
-                    outputRange: ['-5deg', '5deg']
+                    inputRange: [0, 0.1],
+                    outputRange: ['0deg', '10deg']
                   })
                 }]
               }
             ]}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="115" height="205" viewBox="0 0 115 205" fill="none">
-              <rect x="30.729" width="86.8259" height="188.275" rx="6.10517" transform="rotate(15 30.729 0)" fill="#47AFF4"/>
-              <circle cx="49.8886" cy="28.2664" r="16.4608" transform="rotate(15 49.8886 28.2664)" fill="#F5F5F5"/>
-              <circle cx="83.04" cy="37.1492" r="16.4608" transform="rotate(15 83.04 37.1492)" fill="#F5F5F5"/>
-              <mask id="mask0_597_139" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="33" y="11" width="34" height="34">
-                <circle cx="49.8886" cy="28.2664" r="16.4608" transform="rotate(15 49.8886 28.2664)" fill="#F5F5F5"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="256" height="336" viewBox="0 0 256 336" fill="none">
+              <rect x="93.1836" y="70.6285" width="86.8259" height="188.275" rx="6.10517" transform="rotate(4.95818 93.1836 70.6285)" fill="#47AFF4"/>
+              <circle cx="116.979" cy="95.1211" r="16.4608" transform="rotate(4.95818 116.979 95.1211)" fill="#F5F5F5"/>
+              <circle cx="151.171" cy="98.0874" r="16.4608" transform="rotate(4.95818 151.171 98.0874)" fill="#F5F5F5"/>
+              <mask id="mask0_294_430" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="100" y="78" width="34" height="34">
+                <circle cx="116.979" cy="95.1211" r="16.4608" transform="rotate(4.95818 116.979 95.1211)" fill="#F5F5F5"/>
               </mask>
-              <g mask="url(#mask0_597_139)">
-                <circle cx="62.2018" cy="31.5668" r="16.4618" transform="rotate(15 62.2018 31.5668)" fill="#0A0A0A"/>
+              <g mask="url(#mask0_294_430)">
+                <circle cx="129.679" cy="96.224" r="16.4618" transform="rotate(4.95818 129.679 96.224)" fill="#0A0A0A"/>
               </g>
-              <mask id="mask1_597_139" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="66" y="20" width="34" height="34">
-                <circle cx="83.0405" cy="37.1492" r="16.4608" transform="rotate(15 83.0405 37.1492)" fill="#F5F5F5"/>
+              <mask id="mask1_294_430" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="134" y="81" width="34" height="34">
+                <circle cx="151.171" cy="98.0873" r="16.4608" transform="rotate(4.95818 151.171 98.0873)" fill="#F5F5F5"/>
               </mask>
-              <g mask="url(#mask1_597_139)">
-                <circle cx="94.4078" cy="40.1961" r="16.4618" transform="rotate(15 94.4078 40.1961)" fill="#0A0A0A"/>
+              <g mask="url(#mask1_294_430)">
+                <circle cx="162.896" cy="99.1054" r="16.4618" transform="rotate(4.95818 162.896 99.1054)" fill="#0A0A0A"/>
               </g>
-              <rect x="36.293" y="32.4542" width="12.2575" height="62.268" rx="6.12874" transform="rotate(15 36.293 32.4542)" fill="#F5F5F5"/>
-              <rect x="80.8701" y="47.9517" width="10.0535" height="29.2466" rx="5.02676" transform="rotate(15 80.8701 47.9517)" fill="#F5F5F5"/>
-              <path d="M65.7109 53.3761C66.9799 48.6402 58.5187 46.1192 57.1863 51.0919" stroke="#0A0A0A" strokeWidth="2.72931" strokeLinecap="round"/>
-              <path d="M50.1541 31.8535C49.8681 32.9211 49.1696 33.8314 48.2124 34.384C47.2552 34.9367 46.1176 35.0864 45.05 34.8004C43.9823 34.5143 43.0721 33.8158 42.5194 32.8586C41.9668 31.9014 41.817 30.7638 42.1031 29.6962L46.1286 30.7748L50.1541 31.8535Z" fill="#F5F5F5"/>
-              <path d="M82.8367 40.611C82.5506 41.6787 81.8521 42.589 80.8949 43.1416C79.9377 43.6943 78.8002 43.844 77.7325 43.5579C76.6649 43.2719 75.7546 42.5734 75.202 41.6162C74.6493 40.659 74.4995 39.5214 74.7856 38.4538L78.8112 39.5324L82.8367 40.611Z" fill="#F5F5F5"/>
+              <rect x="104.321" y="101.615" width="12.2575" height="62.268" rx="6.12874" transform="rotate(4.95818 104.321 101.615)" fill="#F5F5F5"/>
+              <rect x="150.918" y="109.103" width="10.0535" height="29.2466" rx="5.02676" transform="rotate(4.95818 150.918 109.103)" fill="#F5F5F5"/>
+              <path d="M136.937 117.087C137.361 112.203 128.59 111.196 128.145 116.325" stroke="#0A0A0A" strokeWidth="2.72931" strokeLinecap="round"/>
+              <path d="M117.865 98.6069C117.77 99.708 117.241 100.726 116.395 101.437C115.549 102.148 114.454 102.494 113.353 102.399C112.252 102.303 111.234 101.774 110.523 100.928C109.812 100.082 109.466 98.9876 109.562 97.8865L113.714 98.2467L117.865 98.6069Z" fill="#F5F5F5"/>
+              <path d="M151.574 101.532C151.479 102.633 150.949 103.651 150.103 104.362C149.257 105.073 148.163 105.419 147.062 105.323C145.961 105.228 144.943 104.699 144.232 103.853C143.52 103.006 143.175 101.912 143.27 100.811L147.422 101.171L151.574 101.532Z" fill="#F5F5F5"/>
             </svg>
           </Animated.View>
           <Animated.View 
@@ -521,8 +706,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: embarrassedRotation.interpolate({
-                    inputRange: [-0.3, 0.3],
-                    outputRange: ['-6deg', '6deg']
+                    inputRange: [-0.1, 0.1],
+                    outputRange: ['-10deg', '10deg']
                   })
                 }]
               }
@@ -559,8 +744,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: angryRotation.interpolate({
-                    inputRange: [-0.3, 0.3],
-                    outputRange: ['-4deg', '4deg']
+                    inputRange: [-0.1, 0.1],
+                    outputRange: ['-10deg', '10deg']
                   })
                 }]
               }
@@ -583,8 +768,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: normalRotation.interpolate({
-                    inputRange: [-0.3, 0.3],
-                    outputRange: ['-7deg', '7deg']
+                    inputRange: [-0.1, 0.1],
+                    outputRange: ['-10deg', '10deg']
                   })
                 }]
               }
@@ -617,36 +802,36 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: exciteRotation.interpolate({
-                    inputRange: [-0.3, 0.3],
-                    outputRange: ['-9deg', '9deg']
+                    inputRange: [-0.1, 0.1],
+                    outputRange: ['-10deg', '10deg']
                   })
                 }]
               }
             ]}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="170" height="207" viewBox="0 0 170 207" fill="none">
-              <path d="M120.102 27.8102C120.984 26.055 123.633 26.7122 123.592 28.6758L122.631 74.4413C122.605 75.7139 123.846 76.6297 125.054 76.2292L168.504 61.8251C170.368 61.2071 171.777 63.5452 170.359 64.9045L137.319 96.5866C136.401 97.4675 136.63 98.9925 137.768 99.5636L178.677 120.102C180.432 120.984 179.775 123.633 177.812 123.592L132.046 122.631C130.773 122.605 129.858 123.846 130.258 125.054L144.662 168.504C145.28 170.368 142.942 171.777 141.583 170.359L109.901 137.319C109.02 136.401 107.495 136.63 106.924 137.768L86.385 178.677C85.5037 180.432 82.8544 179.775 82.8956 177.812L83.8559 132.046C83.8826 130.773 82.6418 129.858 81.4336 130.258L37.9833 144.662C36.119 145.28 34.7103 142.942 36.1279 141.583L69.1681 109.901C70.0868 109.02 69.857 107.495 68.7195 106.924L27.8102 86.385C26.055 85.5037 26.7122 82.8544 28.6758 82.8956L74.4413 83.8559C75.7139 83.8826 76.6297 82.6418 76.2292 81.4336L61.8251 37.9833C61.2071 36.119 63.5452 34.7103 64.9045 36.1279L96.5866 69.1681C97.4675 70.0868 98.9925 69.857 99.5636 68.7195L120.102 27.8102Z" fill="#EE47CA"/>
-              <circle cx="91.5611" cy="85.0877" r="15.1001" transform="rotate(13.9307 91.5611 85.0877)" fill="#F5F5F5"/>
-              <circle cx="122.12" cy="92.6674" r="15.1001" transform="rotate(13.9307 122.12 92.6674)" fill="#F5F5F5"/>
-              <mask id="mask0_597_163" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="76" y="69" width="31" height="32">
-                <circle cx="91.5606" cy="85.0876" r="15.1001" transform="rotate(13.9307 91.5606 85.0876)" fill="#F5F5F5"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="235" height="249" viewBox="0 0 235 249" fill="none">
+              <path d="M135.103 49.8102C135.984 48.055 138.633 48.7122 138.592 50.6758L137.632 96.4413C137.605 97.7139 138.846 98.6297 140.054 98.2292L183.504 83.8251C185.368 83.2071 186.777 85.5452 185.36 86.9045L152.319 118.587C151.401 119.468 151.63 120.993 152.768 121.564L193.677 142.102C195.432 142.984 194.775 145.633 192.812 145.592L147.046 144.631C145.774 144.605 144.858 145.846 145.258 147.054L159.662 190.504C160.28 192.368 157.942 193.777 156.583 192.359L124.901 159.319C124.02 158.401 122.495 158.63 121.924 159.768L101.385 200.677C100.504 202.432 97.8545 201.775 97.8957 199.812L98.856 154.046C98.8827 152.773 97.6419 151.858 96.4337 152.258L52.9834 166.662C51.1191 167.28 49.7104 164.942 51.128 163.583L84.1682 131.901C85.0869 131.02 84.8571 129.495 83.7196 128.924L42.8103 108.385C41.0551 107.504 41.7123 104.854 43.6759 104.896L89.4414 105.856C90.714 105.883 91.6298 104.642 91.2293 103.434L76.8252 59.9833C76.2072 58.119 78.5453 56.7103 79.9046 58.1279L111.587 91.1681C112.468 92.0868 113.993 91.857 114.564 90.7195L135.103 49.8102Z" fill="#EE47CA"/>
+              <circle cx="106.561" cy="107.088" r="15.1001" transform="rotate(13.9307 106.561 107.088)" fill="#F5F5F5"/>
+              <circle cx="137.12" cy="114.667" r="15.1001" transform="rotate(13.9307 137.12 114.667)" fill="#F5F5F5"/>
+              <mask id="mask0_294_818" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="91" y="91" width="31" height="32">
+                <circle cx="106.561" cy="107.088" r="15.1001" transform="rotate(13.9307 106.561 107.088)" fill="#F5F5F5"/>
               </mask>
-              <g mask="url(#mask0_597_163)">
-                <circle cx="79.3391" cy="82.0569" r="15.101" transform="rotate(13.9307 79.3391 82.0569)" fill="#0A0A0A"/>
+              <g mask="url(#mask0_294_818)">
+                <circle cx="94.3392" cy="104.057" r="15.101" transform="rotate(13.9307 94.3392 104.057)" fill="#0A0A0A"/>
               </g>
-              <mask id="mask1_597_163" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="107" y="77" width="31" height="31">
-                <circle cx="122.119" cy="92.6674" r="15.1001" transform="rotate(13.9307 122.119 92.6674)" fill="#F5F5F5"/>
+              <mask id="mask1_294_818" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="122" y="99" width="31" height="31">
+                <circle cx="137.119" cy="114.667" r="15.1001" transform="rotate(13.9307 137.119 114.667)" fill="#F5F5F5"/>
               </mask>
-              <g mask="url(#mask1_597_163)">
-                <circle cx="109.897" cy="89.6364" r="15.101" transform="rotate(13.9307 109.897 89.6364)" fill="#0A0A0A"/>
+              <g mask="url(#mask1_294_818)">
+                <circle cx="124.897" cy="111.636" r="15.101" transform="rotate(13.9307 124.897 111.636)" fill="#0A0A0A"/>
               </g>
-              <path d="M95.1433 88.2594C94.8992 89.2435 94.2741 90.0903 93.4057 90.6136C92.5372 91.1369 91.4964 91.2937 90.5123 91.0496C89.5282 90.8055 88.6814 90.1804 88.1581 89.312C87.6348 88.4435 87.478 87.4027 87.7221 86.4186L91.4327 87.339L95.1433 88.2594Z" fill="#F5F5F5"/>
-              <path d="M125.699 95.8388C125.455 96.823 124.83 97.6698 123.962 98.1931C123.093 98.7163 122.053 98.8732 121.068 98.6291C120.084 98.385 119.238 97.7599 118.714 96.8914C118.191 96.023 118.034 94.9822 118.278 93.9981L121.989 94.9185L125.699 95.8388Z" fill="#F5F5F5"/>
-              <mask id="path-10-inside-1_597_163" fill="white">
-                <path d="M106.76 102.388C104.51 105.934 100.868 107.655 98.6267 106.232C96.3852 104.81 96.3923 100.782 98.642 97.2371L106.76 102.388Z"/>
+              <path d="M110.143 110.259C109.899 111.243 109.274 112.09 108.406 112.614C107.537 113.137 106.497 113.294 105.512 113.05C104.528 112.805 103.681 112.18 103.158 111.312C102.635 110.443 102.478 109.403 102.722 108.419L106.433 109.339L110.143 110.259Z" fill="#F5F5F5"/>
+              <path d="M140.7 117.839C140.455 118.823 139.83 119.67 138.962 120.193C138.093 120.716 137.053 120.873 136.069 120.629C135.084 120.385 134.238 119.76 133.714 118.891C133.191 118.023 133.034 116.982 133.278 115.998L136.989 116.918L140.7 117.839Z" fill="#F5F5F5"/>
+              <mask id="path-10-inside-1_294_818" fill="white">
+                <path d="M121.76 124.388C119.51 127.934 115.868 129.655 113.627 128.232C111.385 126.81 111.392 122.782 113.642 119.237L121.76 124.388Z"/>
               </mask>
-              <path d="M106.76 102.388C104.51 105.934 100.868 107.655 98.6267 106.232C96.3852 104.81 96.3923 100.782 98.642 97.2371L106.76 102.388Z" fill="#0A0A0A"/>
-              <path d="M106.76 102.388L107.538 102.882L108.032 102.104L107.254 101.61L106.76 102.388ZM98.6267 106.232L98.133 107.01L98.1331 107.01L98.6267 106.232ZM98.642 97.2371L99.1357 96.4591L98.3577 95.9654L97.864 96.7434L98.642 97.2371ZM106.76 102.388L105.982 101.894C104.936 103.543 103.588 104.73 102.297 105.34C100.993 105.956 99.8805 105.937 99.1204 105.454L98.6267 106.232L98.1331 107.01C99.6146 107.951 101.444 107.781 103.084 107.006C104.736 106.225 106.334 104.779 107.538 102.882L106.76 102.388ZM98.6267 106.232L99.1205 105.454C98.3604 104.972 97.8691 103.974 97.8716 102.532C97.874 101.104 98.3739 99.3793 99.42 97.7307L98.642 97.2371L97.864 96.7434C96.6604 98.6402 96.0319 100.702 96.0287 102.529C96.0256 104.343 96.6515 106.07 98.133 107.01L98.6267 106.232ZM98.642 97.2371L98.1483 98.0151L106.266 103.166L106.76 102.388L107.254 101.61L99.1357 96.4591L98.642 97.2371Z" fill="black" mask="url(#path-10-inside-1_597_163)"/>
+              <path d="M121.76 124.388C119.51 127.934 115.868 129.655 113.627 128.232C111.385 126.81 111.392 122.782 113.642 119.237L121.76 124.388Z" fill="#0A0A0A"/>
+              <path d="M121.76 124.388L122.538 124.882L123.032 124.104L122.254 123.61L121.76 124.388ZM113.627 128.232L113.133 129.01L113.133 129.01L113.627 128.232ZM113.642 119.237L114.136 118.459L113.358 117.965L112.864 118.743L113.642 119.237ZM121.76 124.388L120.982 123.894C119.936 125.543 118.588 126.73 117.297 127.34C115.993 127.956 114.881 127.937 114.121 127.454L113.627 128.232L113.133 129.01C114.615 129.951 116.444 129.781 118.084 129.006C119.737 128.225 121.334 126.779 122.538 124.882L121.76 124.388ZM113.627 128.232L114.121 127.454C113.361 126.972 112.869 125.974 112.872 124.532C112.874 123.104 113.374 121.379 114.42 119.731L113.642 119.237L112.864 118.743C111.66 120.64 111.032 122.702 111.029 124.529C111.026 126.343 111.652 128.07 113.133 129.01L113.627 128.232ZM113.642 119.237L113.148 120.015L121.266 125.166L121.76 124.388L122.254 123.61L114.136 118.459L113.642 119.237Z" fill="black" mask="url(#path-10-inside-1_294_818)"/>
             </svg>
           </Animated.View>
 
@@ -872,15 +1057,17 @@ const styles = StyleSheet.create({
   // 설정완료 화면 캐릭터들
   happyCharacter: {
     position: 'absolute',
-    left: 257,
+    left: 244,
     top: 149,
-    width: 136,
-    height: 164,
+    width: 189,
+    height: 196,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sadCharacter: {
     position: 'absolute',
-    right: 138.71,
-    top: 110,
+    right: 217,
+    top: 44,
     width: 256,
     height: 336,
   },
@@ -890,6 +1077,8 @@ const styles = StyleSheet.create({
     top: 55,
     width: 144.655,
     height: 144.655,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   angryCharacter: {
     position: 'absolute',
@@ -897,6 +1086,8 @@ const styles = StyleSheet.create({
     top: 460,
     width: 222,
     height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   normalCharacter: {
     position: 'absolute',
@@ -904,13 +1095,17 @@ const styles = StyleSheet.create({
     top: 607,
     width: 115,
     height: 115,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   exciteCharacter: {
     position: 'absolute',
-    left: 223,
+    left: 208,
     top: 510,
     width: 235,
     height: 249,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // 설정완료 화면 텍스트
   completionTextContainer: {

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# 업로드된 파일
+uploads/*
+
+# Whisper 모델 캐시
+.whisper/
+
+# IDE
+.vscode/
+.idea/
+
+# 기타
+.DS_Store
+*.log
+

@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
@@ -8,6 +8,7 @@ import { RootStackParamList } from '../types/navigation';
 const getSafeAreaTop = () => {
   if (Platform.OS === 'web') {
     // CSS env() 함수로 Safe Area 감지
+    // @ts-ignore - 웹 환경 전용 코드
     const safeAreaTop = getComputedStyle(document.documentElement)
       .getPropertyValue('--safe-area-inset-top') || '44px';
     return parseInt(safeAreaTop.replace('px', '')) || 44;
@@ -32,7 +33,22 @@ const Header: FC<HeaderProps> = ({ hideOnOnboarding = false, currentScreen, onSe
   }
   return (
     <View style={styles.header}>
-      <Text style={styles.logoText}>Rev_o</Text>
+      <View style={styles.logoContainer}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="55"
+          height="16"
+          viewBox="0 0 55 16"
+          fill="none"
+        >
+          <path d="M41.7692 13.7649H35.4801V15.4855H41.7692V13.7649Z" fill="#B780FF"/>
+          <path d="M0 0H6.06187C7.23323 0 8.23458 0.204688 9.06594 0.61516C9.89729 1.02454 10.5312 1.61124 10.9666 2.37307C11.4021 3.136 11.6203 4.0259 11.6203 5.04497C11.6203 6.06403 11.401 6.93532 10.9612 7.67965C10.5225 8.42397 9.87755 8.99425 9.02755 9.38939C8.17755 9.78454 7.16413 9.98266 5.98619 9.98266H1.88535V7.36331H5.48387C6.12658 7.36331 6.65522 7.27574 7.06871 7.1017C7.48219 6.92766 7.79368 6.66824 8.00097 6.32673C8.20826 5.98522 8.31135 5.55723 8.31135 5.04387C8.31135 4.53051 8.20826 4.07516 8.00097 3.71832C7.79368 3.36258 7.48 3.09331 7.05884 2.91161C6.63768 2.72991 6.10903 2.63906 5.474 2.63906H3.21355V15.4775H0V0ZM12.1786 15.4786H8.6009L4.84116 8.44476H8.32232L12.1786 15.4786Z" fill="#B780FF"/>
+          <path d="M15.5774 14.793C14.7105 14.3066 14.0431 13.6138 13.5763 12.7123C13.1094 11.812 12.8749 10.7536 12.8749 9.53817C12.8749 8.32274 13.1083 7.28079 13.5763 6.36949C14.0431 5.45819 14.7018 4.75221 15.5511 4.25155C16.4004 3.75088 17.3846 3.50055 18.5046 3.50055C19.5534 3.50055 20.4882 3.72014 21.309 4.16042C22.1299 4.5996 22.7754 5.26276 23.2466 6.1499C23.7178 7.03595 23.9535 8.11962 23.9535 9.39874V10.2892H14.1713V8.30518H20.9671C20.9671 7.83306 20.8641 7.41364 20.657 7.04583C20.4498 6.67802 20.1649 6.39035 19.801 6.18284C19.4372 5.97533 19.0229 5.87212 18.5594 5.87212C18.0673 5.87212 17.6279 5.98521 17.2432 6.21029C16.8585 6.43537 16.556 6.74499 16.3391 7.13806C16.121 7.53112 16.0092 7.96042 16.0015 8.42485V10.2903C16.0015 10.8689 16.1122 11.3772 16.3336 11.8131C16.555 12.249 16.8673 12.5817 17.2695 12.8101C17.6728 13.0384 18.1418 13.1526 18.6766 13.1526C19.0328 13.1526 19.3583 13.101 19.6509 12.9967C19.9435 12.8935 20.1912 12.7574 20.395 12.5894C20.5989 12.4214 20.7534 12.2227 20.8608 11.9943H23.8789C23.7288 12.7025 23.4208 13.3217 22.9529 13.8542C22.486 14.3867 21.8822 14.7974 21.1446 15.0872C20.4071 15.3771 19.5698 15.522 18.635 15.522C17.4646 15.522 16.4465 15.2794 15.5796 14.793H15.5774Z" fill="#B780FF"/>
+          <path d="M32.6877 15.4786H29.1273L25.0643 3.85004H28.4211L30.8484 12.2014H30.9765L33.4147 3.85004H36.7715L32.6877 15.4786Z" fill="#B780FF"/>
+          <ellipse cx="48.4" cy="9.15357" rx="4.47857" ry="4.36072" fill="#B780FF"/>
+          <path d="M48.4391 2.9357C51.7834 2.9357 54.4995 5.66373 54.4997 9.03531C54.4997 12.4071 51.7836 15.1359 48.4391 15.1359C45.0948 15.1358 42.3786 12.407 42.3786 9.03531C42.3788 5.66379 45.0949 2.93579 48.4391 2.9357Z" stroke="#B780FF"/>
+        </svg>
+      </View>
       <View style={styles.headerIcons}>
         <TouchableOpacity style={styles.headerIcon}>
           <svg width="24" height="28" viewBox="0 0 26 30" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -64,11 +80,12 @@ const styles = StyleSheet.create({
     paddingTop: getSafeAreaTop(), // Safe Area 자동 감지
     zIndex: 1000,
   },
-  logoText: {
-    color: '#B780FF',
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: 0.25,
+  logoContainer: {
+    width: 55,
+    height: 15.636,
+    flexShrink: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerIcons: {
     flexDirection: 'row',
