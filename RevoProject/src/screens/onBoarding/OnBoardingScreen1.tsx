@@ -71,8 +71,8 @@ const OnBoardingScreen1: FC = () => {
   // 익사이트 캐릭터 애니메이션 상태
   const [isExcitePressed, setIsExcitePressed] = useState(false);
   const exciteBounceAnim = new Animated.Value(0);
-  const exciteRotateAnim = new Animated.Value(0);
-  const exciteScaleAnim = new Animated.Value(0.95);
+  const exciteRotateAnim = new Animated.Value(-5); // 기본 각도 약간 틀어짐
+  const exciteScaleYAnim = new Animated.Value(1); // 위아래 찌그러짐
 
   useEffect(() => {
     // 해피 캐릭터는 즉시 시작 (0초 지연)
@@ -105,93 +105,93 @@ const OnBoardingScreen1: FC = () => {
             useNativeDriver: true,
           }),
         ]),
-        // 점프: 위로 올라가면서 늘어남 (stretch)
+        // 점프: 위로 올라가면서 늘어남 (stretch) - 덜 뜨도록
         Animated.parallel([
           Animated.timing(bounceAnim, {
-            toValue: -8,
-            duration: 200,
+            toValue: -4,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(scaleYAnim, {
             toValue: 1.04,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(scaleXAnim, {
             toValue: 0.98,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
-        // 계속 상승
+        // 계속 상승 - 덜 뜨도록
         Animated.parallel([
           Animated.timing(bounceAnim, {
-            toValue: -35,
-            duration: 200,
+            toValue: -18,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(scaleYAnim, {
             toValue: 1.06,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(scaleXAnim, {
             toValue: 0.97,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
-        // 공중 정점
+        // 공중 정점 - 덜 뜨도록
         Animated.parallel([
           Animated.timing(bounceAnim, {
-            toValue: -45,
-            duration: 100,
+            toValue: -22,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(scaleYAnim, {
             toValue: 1.01,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(scaleXAnim, {
             toValue: 0.99,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 하강 시작: 다시 늘어남
         Animated.parallel([
           Animated.timing(bounceAnim, {
-            toValue: -35,
-            duration: 100,
+            toValue: -18,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(scaleYAnim, {
             toValue: 1.05,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(scaleXAnim, {
             toValue: 0.98,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 착지 직전
         Animated.parallel([
           Animated.timing(bounceAnim, {
-            toValue: -8,
-            duration: 100,
+            toValue: -4,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(scaleYAnim, {
             toValue: 1.07,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(scaleXAnim, {
             toValue: 0.96,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
@@ -268,8 +268,8 @@ const OnBoardingScreen1: FC = () => {
       ]).start();
     };
 
-    // 1.3초마다 점프 애니메이션 실행 (다른 주기)
-    const interval = setInterval(startBounceAnimation, 1300);
+    // 0.8초마다 점프 애니메이션 실행 (띠용띠용 느낌)
+    const interval = setInterval(startBounceAnimation, 800);
     
     // 첫 애니메이션 시작 (즉시)
     startBounceAnimation();
@@ -320,118 +320,118 @@ const OnBoardingScreen1: FC = () => {
             useNativeDriver: true,
           }),
         ]),
-        // 점프: 위로 올라가면서 늘어남 (stretch) + 회전
+        // 점프: 위로 올라가면서 늘어남 (stretch) + 회전 - 덜 뜨도록
         Animated.parallel([
           Animated.timing(embarrassedBounceAnim, {
-            toValue: -8,
-            duration: 200,
+            toValue: -3,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleYAnim, {
             toValue: 1.04,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleXAnim, {
             toValue: 0.98,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedRotateAnim, {
             toValue: -5,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
-        // 계속 상승
+        // 계속 상승 - 덜 뜨도록
         Animated.parallel([
           Animated.timing(embarrassedBounceAnim, {
-            toValue: -35,
-            duration: 200,
+            toValue: -15,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleYAnim, {
             toValue: 1.06,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleXAnim, {
             toValue: 0.97,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedRotateAnim, {
             toValue: -3,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
-        // 공중 정점
+        // 공중 정점 - 덜 뜨도록
         Animated.parallel([
           Animated.timing(embarrassedBounceAnim, {
-            toValue: -45,
-            duration: 100,
+            toValue: -18,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleYAnim, {
             toValue: 1.01,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleXAnim, {
             toValue: 0.99,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedRotateAnim, {
             toValue: -2,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 하강 시작: 다시 늘어남
         Animated.parallel([
           Animated.timing(embarrassedBounceAnim, {
-            toValue: -35,
-            duration: 100,
+            toValue: -15,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleYAnim, {
             toValue: 1.05,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleXAnim, {
             toValue: 0.98,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedRotateAnim, {
             toValue: -1,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 착지 직전
         Animated.parallel([
           Animated.timing(embarrassedBounceAnim, {
-            toValue: -8,
-            duration: 100,
+            toValue: -3,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleYAnim, {
             toValue: 1.07,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedScaleXAnim, {
             toValue: 0.96,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(embarrassedRotateAnim, {
             toValue: 0,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
@@ -533,8 +533,8 @@ const OnBoardingScreen1: FC = () => {
       ]).start();
     };
 
-    // 1.7초마다 점프 애니메이션 실행 (다른 주기)
-    const interval = setInterval(startEmbarrassedAnimation, 1700);
+    // 0.9초마다 점프 애니메이션 실행 (띠용띠용 느낌)
+    const interval = setInterval(startEmbarrassedAnimation, 900);
     
     // 첫 애니메이션 시작 (0.2초 지연)
     setTimeout(startEmbarrassedAnimation, 200);
@@ -564,65 +564,65 @@ const OnBoardingScreen1: FC = () => {
         // 점프: 위로 올라가면서 커짐
         Animated.parallel([
           Animated.timing(normalBounceAnim, {
-            toValue: -8,
-            duration: 200,
+            toValue: -4,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(normalScaleAnim, {
             toValue: 1.02,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
         // 계속 상승
         Animated.parallel([
           Animated.timing(normalBounceAnim, {
-            toValue: -35,
-            duration: 200,
+            toValue: -18,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(normalScaleAnim, {
             toValue: 1.04,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
         // 공중 정점
         Animated.parallel([
           Animated.timing(normalBounceAnim, {
-            toValue: -45,
-            duration: 100,
+            toValue: -22,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(normalScaleAnim, {
             toValue: 1.0,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 하강 시작
         Animated.parallel([
           Animated.timing(normalBounceAnim, {
-            toValue: -35,
-            duration: 100,
+            toValue: -18,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(normalScaleAnim, {
             toValue: 1.02,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 착지 직전
         Animated.parallel([
           Animated.timing(normalBounceAnim, {
-            toValue: -8,
-            duration: 100,
+            toValue: -4,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(normalScaleAnim, {
             toValue: 1.03,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
@@ -666,8 +666,8 @@ const OnBoardingScreen1: FC = () => {
       ]).start();
     };
 
-    // 1.5초마다 점프 애니메이션 실행 (다른 주기)
-    const interval = setInterval(startNormalAnimation, 1500);
+    // 0.95초마다 점프 애니메이션 실행 (띠용띠용 느낌)
+    const interval = setInterval(startNormalAnimation, 950);
     
     // 첫 애니메이션 시작 (0.4초 지연)
     setTimeout(startNormalAnimation, 400);
@@ -694,68 +694,68 @@ const OnBoardingScreen1: FC = () => {
           duration: 100,
           useNativeDriver: true,
         }),
-        // 점프: 위로 올라가면서 길어짐
+        // 점프: 위로 올라가면서 길어짐 - 조금만 줄임
         Animated.parallel([
           Animated.timing(sadBounceAnim, {
-            toValue: -8,
-            duration: 200,
+            toValue: -5,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(sadScaleYAnim, {
             toValue: 1.05,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
-        // 계속 상승: 길어진 상태 유지
+        // 계속 상승: 길어진 상태 유지 - 조금만 줄임
         Animated.parallel([
           Animated.timing(sadBounceAnim, {
-            toValue: -35,
-            duration: 200,
+            toValue: -20,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(sadScaleYAnim, {
             toValue: 1.08,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
-        // 공중 정점: 길어진 상태
+        // 공중 정점: 길어진 상태 - 조금만 줄임
         Animated.parallel([
           Animated.timing(sadBounceAnim, {
-            toValue: -45,
-            duration: 100,
+            toValue: -25,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(sadScaleYAnim, {
             toValue: 1.06,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 하강 시작: 여전히 길어짐
         Animated.parallel([
           Animated.timing(sadBounceAnim, {
-            toValue: -35,
-            duration: 100,
+            toValue: -20,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(sadScaleYAnim, {
             toValue: 1.08,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 착지 직전: 길어진 상태
         Animated.parallel([
           Animated.timing(sadBounceAnim, {
-            toValue: -8,
-            duration: 100,
+            toValue: -5,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(sadScaleYAnim, {
             toValue: 1.05,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
@@ -787,8 +787,8 @@ const OnBoardingScreen1: FC = () => {
       ]).start();
     };
 
-    // 1.8초마다 점프 애니메이션 실행 (다른 주기)
-    const interval = setInterval(startSadAnimation, 1800);
+    // 1.0초마다 점프 애니메이션 실행 (띠용띠용 느낌)
+    const interval = setInterval(startSadAnimation, 1000);
     
     // 첫 애니메이션 시작 (0.6초 지연)
     setTimeout(startSadAnimation, 600);
@@ -819,90 +819,90 @@ const OnBoardingScreen1: FC = () => {
         // 점프: 위로 올라가면서 가로로 퍼지고 세로로 납작
         Animated.parallel([
           Animated.timing(angryBounceAnim, {
-            toValue: -8,
-            duration: 200,
+            toValue: -4,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleXAnim, {
             toValue: 1.08,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleYAnim, {
             toValue: 0.94,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
         // 계속 상승: 가로로 퍼진 상태 유지
         Animated.parallel([
           Animated.timing(angryBounceAnim, {
-            toValue: -35,
-            duration: 200,
+            toValue: -22,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleXAnim, {
             toValue: 1.12,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleYAnim, {
             toValue: 0.90,
-            duration: 200,
+            duration: 150,
             useNativeDriver: true,
           }),
         ]),
         // 공중 정점: 가로로 퍼진 상태
         Animated.parallel([
           Animated.timing(angryBounceAnim, {
-            toValue: -45,
-            duration: 100,
+            toValue: -32,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleXAnim, {
             toValue: 1.10,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleYAnim, {
             toValue: 0.92,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 하강 시작: 여전히 퍼짐
         Animated.parallel([
           Animated.timing(angryBounceAnim, {
-            toValue: -35,
-            duration: 100,
+            toValue: -22,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleXAnim, {
             toValue: 1.12,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleYAnim, {
             toValue: 0.90,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         // 착지 직전: 서서히 원래 크기로
         Animated.parallel([
           Animated.timing(angryBounceAnim, {
-            toValue: -8,
-            duration: 100,
+            toValue: -4,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleXAnim, {
             toValue: 1.06,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(angryScaleYAnim, {
             toValue: 0.95,
-            duration: 100,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
@@ -966,8 +966,8 @@ const OnBoardingScreen1: FC = () => {
       ]).start();
     };
 
-    // 1.6초마다 점프 애니메이션 실행 (다른 주기)
-    const interval = setInterval(startAngryAnimation, 1600);
+    // 0.85초마다 점프 애니메이션 실행 (띠용띠용 느낌)
+    const interval = setInterval(startAngryAnimation, 850);
     
     // 첫 애니메이션 시작 (0.8초 지연)
     setTimeout(startAngryAnimation, 800);
@@ -980,146 +980,134 @@ const OnBoardingScreen1: FC = () => {
   // 익사이트 캐릭터 애니메이션 (1.0초 지연)
   useEffect(() => {
     const startExciteAnimation = () => {
-      // 1.0초 애니메이션 시퀀스 (회전과 스케일)
+      // 애니메이션 시퀀스 (회전과 이동만, 스케일 제거)
       Animated.sequence([
-        // 시작: 도약 준비 상태로 시작
+        // 시작: 도약 준비 상태로 시작 (기본 각도 유지)
         Animated.parallel([
-          Animated.timing(exciteScaleAnim, {
-            toValue: 0.95,
-            duration: 100,
+          Animated.timing(exciteRotateAnim, {
+            toValue: -5,
+            duration: 110,
             useNativeDriver: true,
           }),
-          Animated.timing(exciteRotateAnim, {
-            toValue: 0,
-            duration: 100,
+          Animated.timing(exciteScaleYAnim, {
+            toValue: 1.0, // 초기 크기
+            duration: 110,
             useNativeDriver: true,
           }),
         ]),
-        // 점프: 위로 올라가면서 왼쪽으로 회전하고 커짐
+        // 점프: 위로 올라가면서 왼쪽으로 회전 - 겹침 방지
         Animated.parallel([
           Animated.timing(exciteBounceAnim, {
-            toValue: -15,
-            duration: 150,
+            toValue: -8,
+            duration: 165,
             useNativeDriver: true,
           }),
           Animated.timing(exciteRotateAnim, {
             toValue: -15,
-            duration: 150,
+            duration: 165,
             useNativeDriver: true,
           }),
-          Animated.timing(exciteScaleAnim, {
-            toValue: 1.08,
-            duration: 150,
+          Animated.timing(exciteScaleYAnim, {
+            toValue: 1.15, // 회전할 때 위아래로 조금 늘어남
+            duration: 165,
             useNativeDriver: true,
           }),
         ]),
-        // 계속 상승: 왼쪽으로 회전하며 커진 상태
+        // 계속 상승: 왼쪽으로 회전 - 겹침 방지
         Animated.parallel([
           Animated.timing(exciteBounceAnim, {
-            toValue: -55,
-            duration: 150,
+            toValue: -30,
+            duration: 165,
             useNativeDriver: true,
           }),
           Animated.timing(exciteRotateAnim, {
             toValue: -30,
-            duration: 150,
+            duration: 165,
             useNativeDriver: true,
           }),
-          Animated.timing(exciteScaleAnim, {
-            toValue: 1.15,
-            duration: 150,
+          Animated.timing(exciteScaleYAnim, {
+            toValue: 1.15, // 회전 중 위아래로 늘어남 유지
+            duration: 165,
             useNativeDriver: true,
           }),
         ]),
-        // 공중 정점: 최대 왼쪽 회전과 크기
+        // 공중 정점: 최대 왼쪽 회전 - 겹침 방지
         Animated.parallel([
           Animated.timing(exciteBounceAnim, {
-            toValue: -70,
-            duration: 100,
+            toValue: -38,
+            duration: 110,
             useNativeDriver: true,
           }),
           Animated.timing(exciteRotateAnim, {
             toValue: -35,
-            duration: 100,
+            duration: 110,
             useNativeDriver: true,
           }),
-          Animated.timing(exciteScaleAnim, {
-            toValue: 1.18,
-            duration: 100,
+          Animated.timing(exciteScaleYAnim, {
+            toValue: 1.15, // 회전 중 위아래로 늘어남 유지
+            duration: 110,
             useNativeDriver: true,
           }),
         ]),
-        // 하강 시작: 오른쪽으로 역회전하며 크기 유지
+        // 하강 시작: 오른쪽으로 역회전
         Animated.parallel([
           Animated.timing(exciteBounceAnim, {
-            toValue: -55,
-            duration: 100,
+            toValue: -30,
+            duration: 110,
             useNativeDriver: true,
           }),
           Animated.timing(exciteRotateAnim, {
             toValue: -20,
-            duration: 100,
+            duration: 110,
             useNativeDriver: true,
           }),
-          Animated.timing(exciteScaleAnim, {
-            toValue: 1.15,
-            duration: 100,
+          Animated.timing(exciteScaleYAnim, {
+            toValue: 1.1, // 회전이 줄어들면서 위아래 늘어남도 줄어듦
+            duration: 110,
             useNativeDriver: true,
           }),
         ]),
-        // 착지 직전: 계속 역회전하며 작아지기 시작
+        // 착지 직전: 계속 역회전
         Animated.parallel([
           Animated.timing(exciteBounceAnim, {
-            toValue: -15,
-            duration: 50,
+            toValue: -8,
+            duration: 55,
             useNativeDriver: true,
           }),
           Animated.timing(exciteRotateAnim, {
             toValue: -5,
-            duration: 50,
+            duration: 55,
             useNativeDriver: true,
           }),
-          Animated.timing(exciteScaleAnim, {
-            toValue: 1.05,
-            duration: 50,
+          Animated.timing(exciteScaleYAnim, {
+            toValue: 1.0, // 회전이 끝나면서 원래 크기로 복귀
+            duration: 55,
             useNativeDriver: true,
           }),
         ]),
-        // 착지: 원래 각도로 복귀하고 작아짐
+        // 착지: 기본 각도로 복귀
         Animated.parallel([
           Animated.timing(exciteBounceAnim, {
             toValue: 0,
-            duration: 50,
+            duration: 55,
             useNativeDriver: true,
           }),
           Animated.timing(exciteRotateAnim, {
-            toValue: 0,
-            duration: 50,
+            toValue: -5,
+            duration: 55,
             useNativeDriver: true,
           }),
-          Animated.timing(exciteScaleAnim, {
-            toValue: 0.92,
-            duration: 50,
+          Animated.timing(exciteScaleYAnim, {
+            toValue: 1.0, // 원래 크기 유지
+            duration: 55,
             useNativeDriver: true,
           }),
         ]),
-        // 바로 다음 점프 준비
-        Animated.timing(exciteScaleAnim, {
-          toValue: 0.94,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        // 다음 점프 준비 완료
-        Animated.timing(exciteScaleAnim, {
-          toValue: 0.95,
-          duration: 100,
-          useNativeDriver: true,
-        }),
       ]).start();
     };
 
-    // 1.2초마다 점프 애니메이션 실행 (다른 주기)
-    const interval = setInterval(startExciteAnimation, 1200);
+    // 0.8초마다 점프 애니메이션 실행 (띠용띠용 느낌)
+    const interval = setInterval(startExciteAnimation, 800);
     
     // 첫 애니메이션 시작 (1.0초 지연)
     setTimeout(startExciteAnimation, 1000);
@@ -1198,21 +1186,21 @@ const OnBoardingScreen1: FC = () => {
         </View>
         <View style={styles.character4}>
           <Animated.View 
-            style={[
-              styles.exciteCharacterWrapper,
-              {
-                transform: [
-                  { translateY: exciteBounceAnim },
-                  { rotate: exciteRotateAnim.interpolate({
-                    inputRange: [-360, 360],
-                    outputRange: ['-360deg', '360deg'],
-                  }) },
-                  { scale: exciteScaleAnim },
-                ],
-              },
-            ]}
+              style={[
+                styles.exciteCharacterWrapper,
+                {
+                  transform: [
+                    { translateY: exciteBounceAnim },
+                    { rotate: exciteRotateAnim.interpolate({
+                      inputRange: [-360, 360],
+                      outputRange: ['-360deg', '360deg'],
+                    }) },
+                    { scaleY: exciteScaleYAnim }, // 회전할 때 위아래로 늘어남
+                  ],
+                },
+              ]}
           >
-            <ExciteCharacter width={107.10901975631714} height={107.10901975631714} />
+            <ExciteCharacter width={140} height={140} />
           </Animated.View>
         </View>
         <View style={styles.character5}>
@@ -1331,34 +1319,35 @@ const styles = StyleSheet.create({
   character1: {
     position: 'absolute',
     left: 0,
-    top: 50,
+    top: 55,
   },
   character2: {
     position: 'absolute',
     left: 0,
-    top: 34,
+    top: 39,
   },
   character3: {
     position: 'absolute',
     left: 90,
-    top: 32,
-    zIndex: 3,
+    top: 37,
+    zIndex: 4,
   },
   character4: {
     position: 'absolute',
-    left: 184,
-    zIndex: 2,
+    left: 140,
+    top: -50,
+    zIndex: 3,
   },
   character5: {
     position: 'absolute',
     left: 179,
-    top: 66,
+    top: 75,
     zIndex: 2,
   },
   character6: {
     position: 'absolute',
     left: 232,
-    top: 76,
+    top: 85,
     zIndex: 1,
   },
          happyCharacterWrapper: {
