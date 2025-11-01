@@ -8,6 +8,8 @@ import {
   StatusBar,
   TextInput,
   Animated,
+  Platform,
+  Easing,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,6 +19,13 @@ import NormalCharacter from '../../components/characters/NormalCharacter';
 import ExciteCharacter from '../../components/characters/ExciteCharacter';
 
 import { useApp } from '../../contexts/AppContext';
+
+// localStorage 타입 선언 (웹 환경용)
+declare const localStorage: {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
 
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 393;
@@ -29,19 +38,46 @@ const OnBoardingScreen2: FC = () => {
   const { setOnboardingCompleted } = useApp();
   const [name, setName] = useState('감자');
   const [currentStep, setCurrentStep] = useState(1); // 1: 이름, 2: 녹음설정, 3: 음성설정, 4: 제스처설정, 5: GPS설정, 6: 알람설정, 7: 설정완료
-  const [recordingEnabled, setRecordingEnabled] = useState(false);
+  const [recordingEnabled, setRecordingEnabled] = useState<boolean | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean | null>(null);
+  const [gestureEnabled, setGestureEnabled] = useState<boolean | null>(null);
+  const [gpsEnabled, setGpsEnabled] = useState<boolean | null>(null);
+  const [alarmEnabled, setAlarmEnabled] = useState<boolean | null>(null);
 
-  // 로컬스토리지에서 마지막 단계 복원
+  // 온보딩 2 로드 시 기존 설정 초기화
   useEffect(() => {
-    const savedStep = localStorage.getItem('onboardingStep');
-    if (savedStep) {
-      setCurrentStep(parseInt(savedStep, 10));
-    }
+    const clearOnboardingData = () => {
+      try {
+        // 웹 환경에서는 localStorage 사용
+        if (Platform.OS === 'web') {
+          localStorage.removeItem('onboardingStep');
+          localStorage.removeItem('recordingEnabled');
+          localStorage.removeItem('voiceEnabled');
+          localStorage.removeItem('gestureEnabled');
+          localStorage.removeItem('gpsEnabled');
+          localStorage.removeItem('alarmEnabled');
+        }
+      } catch (error) {
+        console.log('Error clearing onboarding data:', error);
+      }
+    };
+    
+    clearOnboardingData();
   }, []);
 
-  // 단계가 변경될 때마다 로컬스토리지에 저장
+  // 단계가 변경될 때마다 저장
   useEffect(() => {
-    localStorage.setItem('onboardingStep', currentStep.toString());
+    const saveStep = () => {
+      try {
+        if (Platform.OS === 'web') {
+          localStorage.setItem('onboardingStep', currentStep.toString());
+        }
+      } catch (error) {
+        console.log('Error saving onboarding step:', error);
+      }
+    };
+    
+    saveStep();
   }, [currentStep]);
 
   // 캐릭터 애니메이션을 위한 Animated.Value들
@@ -55,27 +91,38 @@ const OnBoardingScreen2: FC = () => {
   const totalSteps = 7;
   const progressWidth = (currentStep / totalSteps) * 316;
 
-  // 캐릭터 회전 애니메이션 함수들
+  // 캐릭터 회전 애니메이션 함수들 - 연속적으로 반시계방향과 시계방향으로 왔다갔다 하는 애니메이션
   const createRotationAnimation = (animatedValue: Animated.Value, direction: 'clockwise' | 'counterclockwise', duration: number) => {
     return Animated.loop(
-      Animated.timing(animatedValue, {
-        toValue: direction === 'clockwise' ? 1 : -1,
-        duration: duration,
-        useNativeDriver: true,
-      })
+      Animated.sequence([
+        // 시계방향으로 회전
+        Animated.timing(animatedValue, {
+          toValue: 0.3,
+          duration: duration,
+          useNativeDriver: true,
+          easing: Easing.linear,
+        }),
+        // 반시계방향으로 회전
+        Animated.timing(animatedValue, {
+          toValue: -0.3,
+          duration: duration,
+          useNativeDriver: true,
+          easing: Easing.linear,
+        })
+      ])
     );
   };
 
   // 설정완료 화면에서만 애니메이션 시작
   useEffect(() => {
     if (currentStep === 7) {
-      // 각 캐릭터마다 다른 타이밍과 방향으로 애니메이션
-      const happyAnim = createRotationAnimation(happyRotation, 'clockwise', 3000);
-      const sadAnim = createRotationAnimation(sadRotation, 'counterclockwise', 4000);
-      const embarrassedAnim = createRotationAnimation(embarrassedRotation, 'clockwise', 2500);
-      const angryAnim = createRotationAnimation(angryRotation, 'counterclockwise', 3500);
-      const normalAnim = createRotationAnimation(normalRotation, 'clockwise', 2000);
-      const exciteAnim = createRotationAnimation(exciteRotation, 'counterclockwise', 4500);
+      // 모든 캐릭터를 600ms로 일정한 속도의 애니메이션
+      const happyAnim = createRotationAnimation(happyRotation, 'clockwise', 600);
+      const sadAnim = createRotationAnimation(sadRotation, 'counterclockwise', 600);
+      const embarrassedAnim = createRotationAnimation(embarrassedRotation, 'clockwise', 600);
+      const angryAnim = createRotationAnimation(angryRotation, 'counterclockwise', 600);
+      const normalAnim = createRotationAnimation(normalRotation, 'clockwise', 600);
+      const exciteAnim = createRotationAnimation(exciteRotation, 'counterclockwise', 600);
 
       // 모든 애니메이션 시작
       happyAnim.start();
@@ -99,13 +146,26 @@ const OnBoardingScreen2: FC = () => {
 
   const handleNavigateToRecording = () => {
     if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+      // 색 변화를 보여주기 위해 잠시 대기 후 다음 단계로 진행
+      setTimeout(() => {
+        setCurrentStep(currentStep + 1);
+      }, 300);
     } else {
-      // 온보딩 완료 시 로컬스토리지 정리
-      localStorage.removeItem('onboardingStep');
+      // 온보딩 완료 시 저장소 정리
+      const clearOnboardingData = () => {
+        try {
+          if (Platform.OS === 'web') {
+            localStorage.removeItem('onboardingStep');
+          }
+        } catch (error) {
+          console.log('Error clearing onboarding data:', error);
+        }
+      };
+      
+      clearOnboardingData();
       // Context를 통해 온보딩 완료 상태 설정
       setOnboardingCompleted(true);
-    navigation.navigate('Recording');
+      navigation.navigate('Recording');
     }
   };
 
@@ -173,23 +233,23 @@ const OnBoardingScreen2: FC = () => {
 
           {/* 설정 옵션 */}
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionTop, recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionTop, recordingEnabled === true && styles.settingOptionActive]}
             onPress={() => {
               setRecordingEnabled(true);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, recordingEnabled && styles.settingOptionTextActive]}>켜기</Text>
+            <Text style={[styles.settingOptionText, recordingEnabled === true && styles.settingOptionTextActive]}>켜기</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionBottom, !recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionBottom, recordingEnabled === false && styles.settingOptionActive]}
             onPress={() => {
               setRecordingEnabled(false);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, !recordingEnabled && styles.settingOptionTextActive]}>끄기</Text>
+            <Text style={[styles.settingOptionText, recordingEnabled === false && styles.settingOptionTextActive]}>끄기</Text>
           </TouchableOpacity>
 
           {/* 설명 텍스트 */}
@@ -216,23 +276,23 @@ const OnBoardingScreen2: FC = () => {
 
           {/* 설정 옵션 */}
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionTop, recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionTop, voiceEnabled === true && styles.settingOptionActive]}
             onPress={() => {
-              setRecordingEnabled(true);
+              setVoiceEnabled(true);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, recordingEnabled && styles.settingOptionTextActive]}>켜기</Text>
+            <Text style={[styles.settingOptionText, voiceEnabled === true && styles.settingOptionTextActive]}>켜기</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionBottom, !recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionBottom, voiceEnabled === false && styles.settingOptionActive]}
             onPress={() => {
-              setRecordingEnabled(false);
+              setVoiceEnabled(false);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, !recordingEnabled && styles.settingOptionTextActive]}>끄기</Text>
+            <Text style={[styles.settingOptionText, voiceEnabled === false && styles.settingOptionTextActive]}>끄기</Text>
           </TouchableOpacity>
 
           {/* 설명 텍스트 */}
@@ -258,23 +318,23 @@ const OnBoardingScreen2: FC = () => {
 
           {/* 설정 옵션 */}
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionTop, recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionTop, gestureEnabled === true && styles.settingOptionActive]}
             onPress={() => {
-              setRecordingEnabled(true);
+              setGestureEnabled(true);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, recordingEnabled && styles.settingOptionTextActive]}>켜기</Text>
+            <Text style={[styles.settingOptionText, gestureEnabled === true && styles.settingOptionTextActive]}>켜기</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionBottom, !recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionBottom, gestureEnabled === false && styles.settingOptionActive]}
             onPress={() => {
-              setRecordingEnabled(false);
+              setGestureEnabled(false);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, !recordingEnabled && styles.settingOptionTextActive]}>끄기</Text>
+            <Text style={[styles.settingOptionText, gestureEnabled === false && styles.settingOptionTextActive]}>끄기</Text>
           </TouchableOpacity>
 
         {/* 설명 텍스트 */}
@@ -300,23 +360,23 @@ const OnBoardingScreen2: FC = () => {
 
           {/* 설정 옵션 */}
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionTop, recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionTop, gpsEnabled === true && styles.settingOptionActive]}
             onPress={() => {
-              setRecordingEnabled(true);
+              setGpsEnabled(true);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, recordingEnabled && styles.settingOptionTextActive]}>켜기</Text>
+            <Text style={[styles.settingOptionText, gpsEnabled === true && styles.settingOptionTextActive]}>켜기</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionBottom, !recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionBottom, gpsEnabled === false && styles.settingOptionActive]}
             onPress={() => {
-              setRecordingEnabled(false);
+              setGpsEnabled(false);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, !recordingEnabled && styles.settingOptionTextActive]}>끄기</Text>
+            <Text style={[styles.settingOptionText, gpsEnabled === false && styles.settingOptionTextActive]}>끄기</Text>
           </TouchableOpacity>
 
           {/* 설명 텍스트 */}
@@ -343,23 +403,23 @@ const OnBoardingScreen2: FC = () => {
 
           {/* 설정 옵션 */}
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionTop, recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionTop, alarmEnabled === true && styles.settingOptionActive]}
             onPress={() => {
-              setRecordingEnabled(true);
+              setAlarmEnabled(true);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, recordingEnabled && styles.settingOptionTextActive]}>켜기</Text>
+            <Text style={[styles.settingOptionText, alarmEnabled === true && styles.settingOptionTextActive]}>켜기</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.settingOption, styles.settingOptionBottom, !recordingEnabled && styles.settingOptionActive]}
+            style={[styles.settingOption, styles.settingOptionBottom, alarmEnabled === false && styles.settingOptionActive]}
             onPress={() => {
-              setRecordingEnabled(false);
+              setAlarmEnabled(false);
               handleNavigateToRecording();
             }}
           >
-            <Text style={[styles.settingOptionText, !recordingEnabled && styles.settingOptionTextActive]}>끄기</Text>
+            <Text style={[styles.settingOptionText, alarmEnabled === false && styles.settingOptionTextActive]}>끄기</Text>
           </TouchableOpacity>
 
         {/* 설명 텍스트 */}
@@ -377,8 +437,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: happyRotation.interpolate({
-                    inputRange: [-1, 1],
-                    outputRange: ['-15deg', '15deg']
+                    inputRange: [-0.3, 0.3],
+                    outputRange: ['-8deg', '8deg']
                   })
                 }]
               }
@@ -425,8 +485,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: sadRotation.interpolate({
-                    inputRange: [-1, 1],
-                    outputRange: ['-20deg', '20deg']
+                    inputRange: [-0.3, 0.3],
+                    outputRange: ['-5deg', '5deg']
                   })
                 }]
               }
@@ -461,8 +521,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: embarrassedRotation.interpolate({
-                    inputRange: [-1, 1],
-                    outputRange: ['-10deg', '10deg']
+                    inputRange: [-0.3, 0.3],
+                    outputRange: ['-6deg', '6deg']
                   })
                 }]
               }
@@ -499,8 +559,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: angryRotation.interpolate({
-                    inputRange: [-1, 1],
-                    outputRange: ['-25deg', '25deg']
+                    inputRange: [-0.3, 0.3],
+                    outputRange: ['-4deg', '4deg']
                   })
                 }]
               }
@@ -523,8 +583,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: normalRotation.interpolate({
-                    inputRange: [-1, 1],
-                    outputRange: ['-12deg', '12deg']
+                    inputRange: [-0.3, 0.3],
+                    outputRange: ['-7deg', '7deg']
                   })
                 }]
               }
@@ -557,8 +617,8 @@ const OnBoardingScreen2: FC = () => {
               {
                 transform: [{
                   rotate: exciteRotation.interpolate({
-                    inputRange: [-1, 1],
-                    outputRange: ['-18deg', '18deg']
+                    inputRange: [-0.3, 0.3],
+                    outputRange: ['-9deg', '9deg']
                   })
                 }]
               }
@@ -795,7 +855,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   settingOptionTextActive: {
-    color: '#000000',
+    color: '#F5F5F5',
   },
   descriptionText: {
     position: 'absolute',

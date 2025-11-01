@@ -589,7 +589,13 @@ const SettingsScreen: FC = () => {
           >
             <Text style={styles.gestureMenuText}>두 번 탭</Text>
             <View style={styles.gestureActionContainer}>
-              <Text style={[styles.gestureMenuAction, gestureActions.doubleTap !== '없음' && styles.selectedAction]}>
+              <Text style={[
+                styles.gestureMenuAction, 
+                gestureActions.doubleTap !== '없음' && {
+                  color: '#B780FF',
+                  fontWeight: '700'
+                }
+              ]}>
                 {gestureActions.doubleTap}
               </Text>
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
@@ -607,7 +613,13 @@ const SettingsScreen: FC = () => {
           >
             <Text style={styles.gestureMenuText}>세 번 탭</Text>
             <View style={styles.gestureActionContainer}>
-              <Text style={[styles.gestureMenuAction, gestureActions.tripleTap !== '없음' && styles.selectedAction]}>
+              <Text style={[
+                styles.gestureMenuAction, 
+                gestureActions.tripleTap !== '없음' && {
+                  color: '#B780FF',
+                  fontWeight: '700'
+                }
+              ]}>
                 {gestureActions.tripleTap}
               </Text>
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
@@ -625,7 +637,13 @@ const SettingsScreen: FC = () => {
           >
             <Text style={styles.gestureMenuText}>길게 누르기</Text>
             <View style={styles.gestureActionContainer}>
-              <Text style={[styles.gestureMenuAction, gestureActions.longPress !== '없음' && styles.selectedAction]}>
+              <Text style={[
+                styles.gestureMenuAction, 
+                gestureActions.longPress !== '없음' && {
+                  color: '#B780FF',
+                  fontWeight: '700'
+                }
+              ]}>
                 {gestureActions.longPress}
               </Text>
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
@@ -678,7 +696,9 @@ const SettingsScreen: FC = () => {
                     ...prev,
                     [currentGestureType]: action
                   }));
-                  setShowActionSelector(false);
+                  // 액션 선택 후 액션 선택기를 닫지 않고 유지
+                  // setShowActionSelector(false);
+                  // setCurrentGestureType('');
                 }}
               >
                 <Text style={[
@@ -800,15 +820,13 @@ const styles = StyleSheet.create({
   },
   darkModeTitle: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 48,
     top: 112,
     color: '#F5F5F5',
     fontSize: 60,
     fontWeight: '700',
     letterSpacing: 1.2,
     lineHeight: 90,
-    textAlign: 'center',
   },
   darkModeDescription: {
     position: 'absolute',
@@ -1045,6 +1063,7 @@ const styles = StyleSheet.create({
   },
   selectedAction: {
     color: '#B780FF',
+    fontWeight: '700',
   },
   // 선택된 액션 표시 스타일
   selectedActionsContainer: {
@@ -1052,16 +1071,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   selectedActionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#3A3A3A',
+    height: 81,
+    backgroundColor: '#B780FF',
     borderWidth: 1,
     borderColor: '#555555',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 8,
+    marginHorizontal: 0,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
   },
   gestureTypeText: {
     fontSize: 16,
@@ -1069,9 +1085,11 @@ const styles = StyleSheet.create({
     color: '#F5F5F5',
   },
   selectedActionText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#B780FF',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.56,
+    lineHeight: 42,
   },
   // 액션 선택기 스타일
   actionSelectorContainer: {
