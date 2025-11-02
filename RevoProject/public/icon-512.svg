@@ -1,34 +1,28 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle cx="256" cy="256" r="256" fill="#FED046"/>
-<circle cx="125.9" cy="198.1" r="51.7" fill="#F5F5F5"/>
-<circle cx="233.6" cy="198.1" r="51.7" fill="#F5F5F5"/>
-<mask id="mask0_512" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="72" y="144" width="108" height="108">
-<circle cx="125.9" cy="198.1" r="51.7" fill="#F5F5F5"/>
-</mask>
-<g mask="url(#mask0_512)">
-<circle cx="82.7" cy="198.1" r="51.7" fill="#0A0A0A"/>
+<g clip-path="url(#clip0_941_25)">
+<rect width="512" height="512" fill="url(#paint0_linear_941_25)"/>
+<g filter="url(#filter0_f_941_25)">
+<path d="M512 512L144.309 550.548L94.888 342.981L101.807 206.579L166.054 137.39L249.081 112.68L388.448 161.112L593.05 311.351L512 512Z" fill="url(#paint1_linear_941_25)" fill-opacity="0.6"/>
 </g>
-<mask id="mask1_512" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="181" y="144" width="108" height="108">
-<circle cx="233.6" cy="198.1" r="51.7" fill="#F5F5F5"/>
-</mask>
-<g mask="url(#mask1_512)">
-<circle cx="190.4" cy="198.1" r="51.7" fill="#0A0A0A"/>
+<circle cx="251.058" cy="266.873" r="100.819" fill="white"/>
+<circle cx="251.058" cy="266.873" r="158.147" stroke="white" stroke-width="31.6293"/>
 </g>
-<circle cx="125.9" cy="198.1" r="51.7" fill="#F5F5F5"/>
-<circle cx="233.6" cy="198.1" r="51.7" fill="#F5F5F5"/>
-<mask id="mask2_512" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="72" y="144" width="108" height="108">
-<circle cx="125.9" cy="198.1" r="51.7" fill="#F5F5F5"/>
-</mask>
-<g mask="url(#mask2_512)">
-<circle cx="82.7" cy="198.1" r="51.7" fill="#0A0A0A"/>
-</g>
-<mask id="mask3_512" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="181" y="144" width="108" height="108">
-<circle cx="233.6" cy="198.1" r="51.7" fill="#F5F5F5"/>
-</mask>
-<g mask="url(#mask3_512)">
-<circle cx="190.4" cy="198.1" r="51.7" fill="#0A0A0A"/>
-</g>
-<path d="M163.4 249.6C163.4 265.1 190.9 265.6 190.9 249.6" stroke="#0A0A0A" stroke-width="7.7" stroke-linecap="round"/>
-<path d="M144.8 207.2C144.8 210.7 143.3 214 140.8 216.5C138.3 219 134.9 220.4 131.4 220.4C127.9 220.4 124.5 219 122 216.5C119.5 214 118 210.7 118 207.2L131.4 207.2H144.8Z" fill="#F5F5F5"/>
-<path d="M252.5 207.2C252.5 210.7 251 214 248.5 216.5C246 219 242.6 220.4 239.1 220.4C235.6 220.4 232.2 219 229.7 216.5C227.2 214 225.7 210.7 225.7 207.2L239.1 207.2H252.5Z" fill="#F5F5F5"/>
+<defs>
+<filter id="filter0_f_941_25" x="88.9575" y="106.749" width="510.023" height="449.73" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="2.96525" result="effect1_foregroundBlur_941_25"/>
+</filter>
+<linearGradient id="paint0_linear_941_25" x1="256" y1="0" x2="256" y2="512" gradientUnits="userSpaceOnUse">
+<stop stop-color="#B38DDA"/>
+<stop offset="1" stop-color="#8F51D3"/>
+</linearGradient>
+<linearGradient id="paint1_linear_941_25" x1="303.444" y1="112.68" x2="303.444" y2="512" gradientUnits="userSpaceOnUse">
+<stop stop-color="#8059A1"/>
+<stop offset="1" stop-color="#6527AB"/>
+</linearGradient>
+<clipPath id="clip0_941_25">
+<rect width="512" height="512" fill="white"/>
+</clipPath>
+</defs>
 </svg>
