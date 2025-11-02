@@ -69,6 +69,33 @@ declare global {
     video?: boolean | MediaTrackConstraints;
   }
 
+  interface AudioContext {
+    createAnalyser(): AnalyserNode;
+    createMediaStreamSource(stream: MediaStream): MediaStreamAudioSourceNode;
+    close(): Promise<void>;
+    state: string;
+  }
+
+  interface AnalyserNode {
+    fftSize: number;
+    smoothingTimeConstant: number;
+    frequencyBinCount: number;
+    getByteFrequencyData(array: Uint8Array): void;
+    getByteTimeDomainData(array: Uint8Array): void;
+  }
+
+  interface MediaStreamAudioSourceNode {
+    connect(destination: AnalyserNode): void;
+  }
+
+  var AudioContext: {
+    new (): AudioContext;
+  };
+
+  var webkitAudioContext: {
+    new (): AudioContext;
+  };
+
   interface SpeechRecognition extends EventTarget {
     lang: string;
     continuous: boolean;

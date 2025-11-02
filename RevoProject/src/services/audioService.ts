@@ -94,20 +94,31 @@ export const startSpeechRecognition = (
 
   recognition.onresult = (event: SpeechRecognitionEvent) => {
     let interimTranscript = '';
+    let newFinalText = '';
 
+    // 새로운 결과만 처리 (event.resultIndex부터)
     for (let i = event.resultIndex; i < event.results.length; i++) {
       const result = event.results[i];
       const transcript = result[0].transcript;
+      
       if (result.isFinal) {
-        finalTranscript += transcript + ' ';
+        // 최종 결과는 finalTranscript에 누적
+        newFinalText += transcript + ' ';
       } else {
+        // 중간 결과는 현재 임시 결과로 표시
         interimTranscript += transcript;
       }
     }
 
-    // 최종 결과 전달
-    if (finalTranscript.trim()) {
-      onResult(finalTranscript.trim());
+    // 새로운 최종 결과가 있으면 누적
+    if (newFinalText) {
+      finalTranscript += newFinalText;
+    }
+
+    // 실시간으로 최종 + 중간 결과 합쳐서 전달
+    const fullTranscript = (finalTranscript + interimTranscript).trim();
+    if (fullTranscript) {
+      onResult(fullTranscript);
     }
   };
 

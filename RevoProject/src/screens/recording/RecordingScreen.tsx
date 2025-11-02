@@ -54,6 +54,10 @@ const RecordingScreen: FC = () => {
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptRef = useRef<string>('');
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const [waveformData, setWaveformData] = useState<number[]>([]);
   
   // 온보딩 완료 상태 확인
   useEffect(() => {
@@ -86,6 +90,15 @@ const RecordingScreen: FC = () => {
       }
     }
   }, []);
+
+  // 녹음 중지 시 애니메이션 정리
+  useEffect(() => {
+    if (!isRecording && animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+      setWaveformData([]);
+    }
+  }, [isRecording]);
 
   // 날짜 표시
   const getCurrentDate = () => {
@@ -145,6 +158,54 @@ const RecordingScreen: FC = () => {
         streamRef.current = stream;
         chunksRef.current = chunks;
 
+        // AudioContext 설정 (오디오 파형 분석용)
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).AudioContext) {
+          const AudioContextConstructor = (window as any).AudioContext || (window as any).webkitAudioContext;
+          const audioContext = new AudioContextConstructor();
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256; // 파형 분석 크기
+          analyser.smoothingTimeConstant = 0.8;
+          
+          const source = audioContext.createMediaStreamSource(stream);
+          source.connect(analyser);
+          
+          audioContextRef.current = audioContext;
+          analyserRef.current = analyser;
+          
+          // 파형 데이터 실시간 업데이트
+          const updateWaveform = () => {
+            if (!analyserRef.current) {
+              if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+              }
+              return;
+            }
+            
+            const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+            analyserRef.current.getByteFrequencyData(dataArray);
+            
+            // 파형 데이터를 정규화하여 0-1 범위로 변환 (상위 주파수 사용)
+            // 음성은 주로 저주파에 집중되므로 중간 대역을 사용
+            const startIndex = 2; // 노이즈 필터링
+            const normalized = Array.from(dataArray)
+              .slice(startIndex, startIndex + 30)
+              .map(val => Math.min(val / 128, 1)); // 128로 나눠서 더 민감하게
+            
+            setWaveformData(normalized);
+            
+            // 계속 업데이트 (isRecording 체크는 외부에서)
+            animationFrameRef.current = requestAnimationFrame(updateWaveform);
+          };
+          
+          // 상태 업데이트 후 시작
+          setTimeout(() => {
+            if (analyserRef.current) {
+              updateWaveform();
+            }
+          }, 100);
+        }
+
         // 녹음 상태 업데이트
         console.log('녹음 시작 - 상태 업데이트 전:', isRecording);
         setIsRecording(true);
@@ -183,6 +244,19 @@ const RecordingScreen: FC = () => {
       mediaRecorderRef.current.stop();
     }
 
+    // 오디오 분석 중지
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    
+    analyserRef.current = null;
+
     // 스트림 중지
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
@@ -194,6 +268,9 @@ const RecordingScreen: FC = () => {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    
+    // 파형 데이터 초기화
+    setWaveformData([]);
 
     setIsRecording(false);
     setIsProcessing(true);
@@ -212,6 +289,73 @@ const RecordingScreen: FC = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 오디오 파형 데이터로 물결 path 생성
+  const generateWaveformPath = (): string => {
+    if (waveformData.length === 0) {
+      // 파형 데이터가 없으면 기본 직선
+      return 'M-14.8986 2.5H393.101M393.101 2.5H801.101';
+    }
+
+    const width = 408;
+    const centerY = 2.5;
+    const maxAmplitude = 1.5; // 최대 물결 높이 (좌우로)
+    const segments = Math.min(waveformData.length, 30); // 최대 30개 세그먼트
+    const segmentWidth = width / segments;
+
+    let path = `M-14.8986 ${centerY} `;
+    
+    // 첫 번째 패턴 (왼쪽부터)
+    for (let i = 0; i < segments; i++) {
+      const x = (i * segmentWidth) - 14.8986;
+      const amplitude = (waveformData[i] || 0) * maxAmplitude;
+      const y = centerY - amplitude;
+      
+      if (i === 0) {
+        path += `L${x} ${y} `;
+      } else {
+        const prevX = ((i - 1) * segmentWidth) - 14.8986;
+        const prevAmplitude = (waveformData[i - 1] || 0) * maxAmplitude;
+        const prevY = centerY - prevAmplitude;
+        
+        // 부드러운 곡선 생성
+        const cpX1 = prevX + segmentWidth * 0.5;
+        const cpY1 = prevY;
+        const cpX2 = x - segmentWidth * 0.5;
+        const cpY2 = y;
+        
+        path += `C${cpX1} ${cpY1},${cpX2} ${cpY2},${x} ${y} `;
+      }
+    }
+    
+    // 중간점 (끝)
+    const endX = (segments * segmentWidth) - 14.8986;
+    path += `L${endX} ${centerY} `;
+    
+    // 두 번째 패턴 (반복)
+    for (let i = 0; i < segments; i++) {
+      const x = (i * segmentWidth) - 14.8986 + width;
+      const amplitude = (waveformData[i] || 0) * maxAmplitude;
+      const y = centerY - amplitude;
+      
+      if (i === 0) {
+        path += `L${x} ${y} `;
+      } else {
+        const prevX = ((i - 1) * segmentWidth) - 14.8986 + width;
+        const prevAmplitude = (waveformData[i - 1] || 0) * maxAmplitude;
+        const prevY = centerY - prevAmplitude;
+        
+        const cpX1 = prevX + segmentWidth * 0.5;
+        const cpY1 = prevY;
+        const cpX2 = x - segmentWidth * 0.5;
+        const cpY2 = y;
+        
+        path += `C${cpX1} ${cpY1},${cpX2} ${cpY2},${x} ${y} `;
+      }
+    }
+    
+    return path;
   };
   
   return (
@@ -260,22 +404,24 @@ const RecordingScreen: FC = () => {
       {!result && (
         <View style={styles.waveContainer}>
         {isRecording && Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).document ? (
-          // 녹음 중: 물결 애니메이션
+          // 녹음 중: 실제 오디오 파형 기반 물결 애니메이션
           <View style={styles.waveWrapper}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="816"
               height="5"
-              viewBox="0 0 816 5"
+              viewBox="-15 0 831 5"
               fill="none"
               // @ts-ignore - 웹 전용 className
               className="wave-animated-line"
               style={{ display: 'block' }}
             >
               <path
-                d="M-14.8986 2.5H393.101M393.101 2.5H801.101"
+                d={waveformData.length > 0 ? generateWaveformPath() : 'M-14.8986 2.5H393.101M393.101 2.5H801.101'}
                 stroke="#B780FF"
                 strokeWidth="5"
+                fill="none"
+                strokeLinecap="round"
               />
             </svg>
           </View>
@@ -437,7 +583,7 @@ const styles = StyleSheet.create({
   },
   waveWrapper: {
     width: 408,
-    height: 5,
+    height: 10,
     overflow: 'hidden',
   },
   transcriptContainer: {

@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/analyze-emotion.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/analyze-emotion",
+      "destination": "/api/analyze-emotion.js"
+    }
+  ]
+}
+
