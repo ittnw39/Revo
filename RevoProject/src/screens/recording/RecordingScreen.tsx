@@ -45,6 +45,15 @@ const RecordingScreen: FC = () => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [transcript, setTranscript] = useState('');
   const [result, setResult] = useState<AudioProcessResult | null>(null);
+  
+  // 키워드 화면 상태
+  const [showKeywords, setShowKeywords] = useState(false);
+  const [emotionResult, setEmotionResult] = useState<{
+    mainEmotion: string;
+    emotionWords: {
+      [key: string]: string[];
+    };
+  } | null>(null);
 
   // 참조
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -54,10 +63,7 @@ const RecordingScreen: FC = () => {
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptRef = useRef<string>('');
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const [waveformData, setWaveformData] = useState<number[]>([]);
+  // 오디오 분석 ref 제거 (웨이브는 CSS 애니메이션 사용)
   
   // 온보딩 완료 상태 확인
   useEffect(() => {
@@ -79,11 +85,20 @@ const RecordingScreen: FC = () => {
               transform: translateX(0);
             }
             100% {
-              transform: translateX(-408px);
+              transform: translateX(-6291px);
+            }
+          }
+          @keyframes waveSlideSecond {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-6291px);
             }
           }
           .wave-animated-line {
-            animation: waveSlide 2s linear infinite;
+            animation: waveSlide 20s linear infinite;
+            will-change: transform;
           }
         `;
         doc.head.appendChild(style);
@@ -91,14 +106,7 @@ const RecordingScreen: FC = () => {
     }
   }, []);
 
-  // 녹음 중지 시 애니메이션 정리
-  useEffect(() => {
-    if (!isRecording && animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-      setWaveformData([]);
-    }
-  }, [isRecording]);
+  // 웨이브 애니메이션은 CSS로 처리되므로 별도 정리 불필요
 
   // 날짜 표시
   const getCurrentDate = () => {
@@ -158,54 +166,6 @@ const RecordingScreen: FC = () => {
         streamRef.current = stream;
         chunksRef.current = chunks;
 
-        // AudioContext 설정 (오디오 파형 분석용)
-        if (Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).AudioContext) {
-          const AudioContextConstructor = (window as any).AudioContext || (window as any).webkitAudioContext;
-          const audioContext = new AudioContextConstructor();
-          const analyser = audioContext.createAnalyser();
-          analyser.fftSize = 256; // 파형 분석 크기
-          analyser.smoothingTimeConstant = 0.8;
-          
-          const source = audioContext.createMediaStreamSource(stream);
-          source.connect(analyser);
-          
-          audioContextRef.current = audioContext;
-          analyserRef.current = analyser;
-          
-          // 파형 데이터 실시간 업데이트
-          const updateWaveform = () => {
-            if (!analyserRef.current) {
-              if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-                animationFrameRef.current = null;
-              }
-              return;
-            }
-            
-            const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-            analyserRef.current.getByteFrequencyData(dataArray);
-            
-            // 파형 데이터를 정규화하여 0-1 범위로 변환 (상위 주파수 사용)
-            // 음성은 주로 저주파에 집중되므로 중간 대역을 사용
-            const startIndex = 2; // 노이즈 필터링
-            const normalized = Array.from(dataArray)
-              .slice(startIndex, startIndex + 30)
-              .map(val => Math.min(val / 128, 1)); // 128로 나눠서 더 민감하게
-            
-            setWaveformData(normalized);
-            
-            // 계속 업데이트 (isRecording 체크는 외부에서)
-            animationFrameRef.current = requestAnimationFrame(updateWaveform);
-          };
-          
-          // 상태 업데이트 후 시작
-          setTimeout(() => {
-            if (analyserRef.current) {
-              updateWaveform();
-            }
-          }, 100);
-        }
-
         // 녹음 상태 업데이트
         console.log('녹음 시작 - 상태 업데이트 전:', isRecording);
         setIsRecording(true);
@@ -244,18 +204,7 @@ const RecordingScreen: FC = () => {
       mediaRecorderRef.current.stop();
     }
 
-    // 오디오 분석 중지
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    
-    analyserRef.current = null;
+    // 오디오 분석 정리 (현재 사용 안 함)
 
     // 스트림 중지
     if (streamRef.current) {
@@ -268,9 +217,6 @@ const RecordingScreen: FC = () => {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    
-    // 파형 데이터 초기화
-    setWaveformData([]);
 
     setIsRecording(false);
     setIsProcessing(true);
@@ -291,72 +237,7 @@ const RecordingScreen: FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // 오디오 파형 데이터로 물결 path 생성
-  const generateWaveformPath = (): string => {
-    if (waveformData.length === 0) {
-      // 파형 데이터가 없으면 기본 직선
-      return 'M-14.8986 2.5H393.101M393.101 2.5H801.101';
-    }
-
-    const width = 408;
-    const centerY = 2.5;
-    const maxAmplitude = 1.5; // 최대 물결 높이 (좌우로)
-    const segments = Math.min(waveformData.length, 30); // 최대 30개 세그먼트
-    const segmentWidth = width / segments;
-
-    let path = `M-14.8986 ${centerY} `;
-    
-    // 첫 번째 패턴 (왼쪽부터)
-    for (let i = 0; i < segments; i++) {
-      const x = (i * segmentWidth) - 14.8986;
-      const amplitude = (waveformData[i] || 0) * maxAmplitude;
-      const y = centerY - amplitude;
-      
-      if (i === 0) {
-        path += `L${x} ${y} `;
-      } else {
-        const prevX = ((i - 1) * segmentWidth) - 14.8986;
-        const prevAmplitude = (waveformData[i - 1] || 0) * maxAmplitude;
-        const prevY = centerY - prevAmplitude;
-        
-        // 부드러운 곡선 생성
-        const cpX1 = prevX + segmentWidth * 0.5;
-        const cpY1 = prevY;
-        const cpX2 = x - segmentWidth * 0.5;
-        const cpY2 = y;
-        
-        path += `C${cpX1} ${cpY1},${cpX2} ${cpY2},${x} ${y} `;
-      }
-    }
-    
-    // 중간점 (끝)
-    const endX = (segments * segmentWidth) - 14.8986;
-    path += `L${endX} ${centerY} `;
-    
-    // 두 번째 패턴 (반복)
-    for (let i = 0; i < segments; i++) {
-      const x = (i * segmentWidth) - 14.8986 + width;
-      const amplitude = (waveformData[i] || 0) * maxAmplitude;
-      const y = centerY - amplitude;
-      
-      if (i === 0) {
-        path += `L${x} ${y} `;
-      } else {
-        const prevX = ((i - 1) * segmentWidth) - 14.8986 + width;
-        const prevAmplitude = (waveformData[i - 1] || 0) * maxAmplitude;
-        const prevY = centerY - prevAmplitude;
-        
-        const cpX1 = prevX + segmentWidth * 0.5;
-        const cpY1 = prevY;
-        const cpX2 = x - segmentWidth * 0.5;
-        const cpY2 = y;
-        
-        path += `C${cpX1} ${cpY1},${cpX2} ${cpY2},${x} ${y} `;
-      }
-    }
-    
-    return path;
-  };
+  // generateWaveformPath 함수 제거 (고정 웨이브 SVG 사용)
   
   return (
     <SafeAreaView style={styles.container}>
@@ -404,24 +285,52 @@ const RecordingScreen: FC = () => {
       {!result && (
         <View style={styles.waveContainer}>
         {isRecording && Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).document ? (
-          // 녹음 중: 실제 오디오 파형 기반 물결 애니메이션
+          // 녹음 중: 웨이브 애니메이션 (기본 바와 같은 위치)
           <View style={styles.waveWrapper}>
+            {/* 첫 번째 패턴 */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="816"
-              height="5"
-              viewBox="-15 0 831 5"
+              width="6291"
+              height="303"
+              viewBox="-2882 -25 6291 82"
               fill="none"
               // @ts-ignore - 웹 전용 className
               className="wave-animated-line"
-              style={{ display: 'block' }}
+              style={{ 
+                display: 'block',
+                position: 'absolute',
+                left: '-2881px',
+                top: -149, // 웨이브 path y=57.622를 기본 바 y=2.5에 맞춤 (정확한 계산)
+              }}
             >
               <path
-                d={waveformData.length > 0 ? generateWaveformPath() : 'M-14.8986 2.5H393.101M393.101 2.5H801.101'}
+                d="M-2882 57.622L-2860.6 43.852C-2839.21 30.081 -2796.41 2.54 -2753.62 2.54C-2710.81 2.54 -2668.02 30.081 -2625.22 30.081C-2582.43 30.081 -2539.64 2.54 -2496.84 2.54C-2454.04 2.54 -2411.24 30.081 -2368.45 30.081C-2325.65 30.081 -2282.86 2.54 -2240.07 2.54C-2197.26 2.54 -2154.47 30.081 -2111.67 30.081C-2068.88 30.081 -2026.08 2.54 -1983.29 2.54C-1940.49 2.54 -1897.69 30.081 -1854.9 30.081C-1812.1 30.081 -1769.31 2.54 -1726.51 2.54C-1683.72 2.54 -1640.91 30.081 -1598.12 30.081C-1555.32 30.081 -1512.53 2.54 -1469.74 2.54C-1426.94 2.54 -1384.15 30.081 -1341.34 30.081C-1298.55 30.081 -1255.75 2.54 -1212.96 2.54C-1170.17 2.54 -1127.37 30.081 -1084.57 30.081C-1041.77 30.081 -998.978 2.54 -956.184 2.54C-913.39 2.54 -870.596 30.081 -827.79 30.081C-784.996 30.081 -742.202 2.54 -699.408 2.54C-656.614 2.54 -613.82 30.081 -571.025 30.081C-528.22 30.081 -485.426 2.54 -442.632 2.54C-399.837 2.54 -357.043 30.081 -314.249 30.081C-271.444 30.081 -228.65 2.54 -185.855 2.54C-143.061 2.54 -100.267 30.081 -57.4728 30.081C-14.6786 30.081 28.1264 2.54 70.9205 2.54C113.715 2.54 156.509 30.081 199.303 30.081C242.097 30.081 284.903 2.54 327.697 2.54C370.491 2.54 413.285 30.081 456.08 30.081C498.874 30.081 541.679 2.54 584.473 2.54C627.267 2.54 670.061 30.081 712.856 30.081C755.65 30.081 798.444 2.54 841.249 2.54C884.043 2.54 926.838 30.081 969.632 30.081C1012.43 30.081 1055.22 2.54 1098.03 2.54C1140.82 2.54 1183.61 30.081 1226.41 30.081C1269.2 30.081 1312 2.54 1354.79 2.54C1397.6 2.54 1440.39 30.081 1483.18 30.081C1525.98 30.081 1568.77 2.54 1611.57 2.54C1654.37 2.54 1697.17 30.081 1739.96 30.081C1782.75 30.081 1825.55 2.54 1868.34 2.54C1911.15 2.54 1953.94 30.081 1996.74 30.081C2039.53 30.081 2082.33 2.54 2125.12 2.54C2167.91 2.54 2210.72 30.081 2253.51 30.081C2296.31 30.081 2339.1 2.54 2381.9 2.54C2424.69 2.54 2467.49 30.081 2510.29 30.081C2553.08 30.081 2595.88 2.54 2638.67 2.54C2681.47 2.54 2724.26 30.081 2767.07 30.081C2809.86 30.081 2852.65 2.54 2895.45 2.54C2938.24 2.54 2981.04 30.081 3023.84 30.081C3066.64 30.081 3109.43 2.54 3152.22 2.54C3195.02 2.54 3237.81 30.081 3280.62 30.081C3323.41 30.081 3366.21 2.54 3387.6 -11.23L3409 -25"
                 stroke="#B780FF"
                 strokeWidth="5"
                 fill="none"
-                strokeLinecap="round"
+              />
+            </svg>
+            {/* 두 번째 패턴 (연속을 위해) */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="6291"
+              height="303"
+              viewBox="-2882 -25 6291 82"
+              fill="none"
+              // @ts-ignore - 웹 전용 className
+              className="wave-animated-line"
+              style={{ 
+                display: 'block',
+                position: 'absolute',
+                left: '3409px',
+                top: -149, // 웨이브 path y=57.622를 기본 바 y=2.5에 맞춤
+              }}
+            >
+              <path
+                d="M-2882 57.622L-2860.6 43.852C-2839.21 30.081 -2796.41 2.54 -2753.62 2.54C-2710.81 2.54 -2668.02 30.081 -2625.22 30.081C-2582.43 30.081 -2539.64 2.54 -2496.84 2.54C-2454.04 2.54 -2411.24 30.081 -2368.45 30.081C-2325.65 30.081 -2282.86 2.54 -2240.07 2.54C-2197.26 2.54 -2154.47 30.081 -2111.67 30.081C-2068.88 30.081 -2026.08 2.54 -1983.29 2.54C-1940.49 2.54 -1897.69 30.081 -1854.9 30.081C-1812.1 30.081 -1769.31 2.54 -1726.51 2.54C-1683.72 2.54 -1640.91 30.081 -1598.12 30.081C-1555.32 30.081 -1512.53 2.54 -1469.74 2.54C-1426.94 2.54 -1384.15 30.081 -1341.34 30.081C-1298.55 30.081 -1255.75 2.54 -1212.96 2.54C-1170.17 2.54 -1127.37 30.081 -1084.57 30.081C-1041.77 30.081 -998.978 2.54 -956.184 2.54C-913.39 2.54 -870.596 30.081 -827.79 30.081C-784.996 30.081 -742.202 2.54 -699.408 2.54C-656.614 2.54 -613.82 30.081 -571.025 30.081C-528.22 30.081 -485.426 2.54 -442.632 2.54C-399.837 2.54 -357.043 30.081 -314.249 30.081C-271.444 30.081 -228.65 2.54 -185.855 2.54C-143.061 2.54 -100.267 30.081 -57.4728 30.081C-14.6786 30.081 28.1264 2.54 70.9205 2.54C113.715 2.54 156.509 30.081 199.303 30.081C242.097 30.081 284.903 2.54 327.697 2.54C370.491 2.54 413.285 30.081 456.08 30.081C498.874 30.081 541.679 2.54 584.473 2.54C627.267 2.54 670.061 30.081 712.856 30.081C755.65 30.081 798.444 2.54 841.249 2.54C884.043 2.54 926.838 30.081 969.632 30.081C1012.43 30.081 1055.22 2.54 1098.03 2.54C1140.82 2.54 1183.61 30.081 1226.41 30.081C1269.2 30.081 1312 2.54 1354.79 2.54C1397.6 2.54 1440.39 30.081 1483.18 30.081C1525.98 30.081 1568.77 2.54 1611.57 2.54C1654.37 2.54 1697.17 30.081 1739.96 30.081C1782.75 30.081 1825.55 2.54 1868.34 2.54C1911.15 2.54 1953.94 30.081 1996.74 30.081C2039.53 30.081 2082.33 2.54 2125.12 2.54C2167.91 2.54 2210.72 30.081 2253.51 30.081C2296.31 30.081 2339.1 2.54 2381.9 2.54C2424.69 2.54 2467.49 30.081 2510.29 30.081C2553.08 30.081 2595.88 2.54 2638.67 2.54C2681.47 2.54 2724.26 30.081 2767.07 30.081C2809.86 30.081 2852.65 2.54 2895.45 2.54C2938.24 2.54 2981.04 30.081 3023.84 30.081C3066.64 30.081 3109.43 2.54 3152.22 2.54C3195.02 2.54 3237.81 30.081 3280.62 30.081C3323.41 30.081 3366.21 2.54 3387.6 -11.23L3409 -25"
+                stroke="#B780FF"
+                strokeWidth="5"
+                fill="none"
               />
             </svg>
           </View>
@@ -447,7 +356,20 @@ const RecordingScreen: FC = () => {
       {/* 녹음 완료 후 재생바 영역 */}
       {result && (
         <View style={styles.completedWaveContainer}>
-          {/* 녹음 바 영역 표시용 (향후 구현) */}
+          {/* 기본 바 (초기 화면과 동일) */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="408"
+            height="5"
+            viewBox="0 0 408 5"
+            fill="none"
+          >
+            <path
+              d="M-14.8986 2.5H393.101"
+              stroke="#B780FF"
+              strokeWidth="5"
+            />
+          </svg>
         </View>
       )}
 
@@ -500,8 +422,19 @@ const RecordingScreen: FC = () => {
           <TouchableOpacity
             style={styles.nextButton}
             onPress={() => {
-              // 다음 화면으로 이동 (향후 구현)
-              console.log('다음 버튼 클릭');
+              // 임시 더미 데이터로 키워드 화면 표시 (피그마 디자인 확인용)
+              setEmotionResult({
+                mainEmotion: '기쁨',
+                emotionWords: {
+                  '기쁨': ['행복', '오리너구리', '동물원', '역북동'],
+                  '슬픔': [],
+                  '분노': [],
+                  '보통': [],
+                  '신남': [],
+                  '당황': [],
+                },
+              });
+              setShowKeywords(true);
             }}
           >
             <Text style={styles.nextButtonText}>다음</Text>
@@ -509,13 +442,102 @@ const RecordingScreen: FC = () => {
         </View>
       )}
 
+      {/* 키워드 화면 */}
+      {showKeywords && emotionResult && (
+        <View style={styles.keywordsScreen}>
+          {/* 배경 프레임 */}
+          <View style={styles.frame} />
+          
+          {/* 상단 헤더 */}
+          <Header />
+          
+          {/* 제목 (날짜 위치와 동일) */}
+          <View style={styles.dateContainer}>
+            <Text style={styles.keywordsTitle}>이런 키워드가 들렸어요</Text>
+          </View>
+          
+          {/* 키워드 태그들 (세로 배치, 스크롤 가능) */}
+          <ScrollView 
+            style={styles.keywordsTagsContainer}
+            contentContainerStyle={styles.keywordsTagsContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {Object.entries(emotionResult.emotionWords).map(([emotion, words]) => 
+              words.map((word, index) => (
+                <View key={`${emotion}-${index}`} style={styles.emotionKeywordTag}>
+                  <Text style={styles.emotionKeywordText}>{word}</Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+          
+          {/* 시간 표시 */}
+          {result && (
+            <View style={styles.keywordsTimeContainer}>
+              <Text style={styles.keywordsTimeText}>
+                {formatTime(Math.floor(result.duration))}
+              </Text>
+            </View>
+          )}
+          
+          {/* 재생 바 */}
+          <View style={styles.keywordsWaveContainer}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="408"
+              height="5"
+              viewBox="0 0 408 5"
+              fill="none"
+            >
+              <path
+                d="M-14.8986 2.5H393.101"
+                stroke="#B780FF"
+                strokeWidth="5"
+              />
+            </svg>
+          </View>
+          
+          {/* 버튼들 */}
+          <View style={styles.keywordsButtonsContainer}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => {
+                setShowKeywords(false);
+                setEmotionResult(null);
+              }}
+            >
+              <Text style={styles.backButtonText}>뒤로가기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.keywordsNextButton}
+              onPress={() => {
+                // TODO: 다음 화면으로 이동
+                console.log('키워드 화면 다음 버튼 클릭');
+              }}
+            >
+              <Text style={styles.keywordsNextButtonText}>다음</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* 하단 네비게이션 바 */}
+          <NavigationBar 
+            onNavigateToRecords={() => navigation.navigate('Records')} 
+            onNavigateToRecording={() => navigation.navigate('Recording')} 
+            onNavigateToProfile={() => navigation.navigate('Profile')} 
+            currentPage="Recording" 
+          />
+        </View>
+      )}
+
       {/* 하단 네비게이션 바 */}
-      <NavigationBar 
-        onNavigateToRecords={() => navigation.navigate('Records')} 
-        onNavigateToRecording={() => navigation.navigate('Recording')} 
-        onNavigateToProfile={() => navigation.navigate('Profile')} 
-        currentPage="Recording" 
-      />
+      {!showKeywords && (
+        <NavigationBar 
+          onNavigateToRecords={() => navigation.navigate('Records')} 
+          onNavigateToRecording={() => navigation.navigate('Recording')} 
+          onNavigateToProfile={() => navigation.navigate('Profile')} 
+          currentPage="Recording" 
+        />
+      )}
 
     </SafeAreaView>
   );
@@ -577,14 +599,15 @@ const styles = StyleSheet.create({
   waveContainer: {
     position: 'absolute',
     top: 603,
-    width: 408,
-    height: 5,
-    overflow: 'hidden',
+    width: 393,
+    height: 303, // 웨이브 전체 높이 (위아래 잘림 방지)
+    overflow: 'visible', // 웨이브가 보이도록 visible로 변경
   },
   waveWrapper: {
-    width: 408,
-    height: 10,
+    width: 393,
+    height: 303, // 웨이브 SVG 높이 (overflow로 위아래만 보이게)
     overflow: 'hidden',
+    position: 'relative',
   },
   transcriptContainer: {
     position: 'absolute',
@@ -607,7 +630,7 @@ const styles = StyleSheet.create({
   recordingButtonContainer: {
     position: 'absolute',
     left: '50%',
-    top: 656,
+    top: 652,
     transform: [{ translateX: -32 }],
   },
   recordingButton: {
@@ -723,7 +746,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 539.5,
+    top: 523, // 초기 화면 timeContainer와 동일한 위치
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -737,13 +760,10 @@ const styles = StyleSheet.create({
   },
   completedWaveContainer: {
     position: 'absolute',
-    left: -10,
-    top: 614,
-    width: 408,
-    height: 264,
-    borderWidth: 5,
-    borderColor: '#B780FF',
-    borderStyle: 'solid',
+    top: 603, // 초기 화면과 동일한 위치
+    width: 393,
+    height: 5,
+    overflow: 'hidden',
   },
   completedButtonsContainer: {
     position: 'absolute',
@@ -790,6 +810,120 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.44,
     lineHeight: 22,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  // 키워드 화면 스타일
+  keywordsScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: screenWidth,
+    height: screenHeight,
+    backgroundColor: '#000000',
+  },
+  keywordsTitle: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: 0.64,
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  keywordsTagsContainer: {
+    position: 'absolute',
+    left: 24,
+    top: 230,
+    right: 24,
+    maxHeight: 290, // 시간 표시 위까지의 높이 (539.5 - 230 - 약간의 여유)
+  },
+  keywordsTagsContent: {
+    flexDirection: 'column',
+  },
+  emotionKeywordTag: {
+    backgroundColor: '#FFD630',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start', // 내용에 맞게 너비 조정
+    marginBottom: 10, // 태그 간 간격
+  },
+  emotionKeywordText: {
+    color: '#000000',
+    fontSize: 32,
+    fontWeight: '600',
+    letterSpacing: 1.28,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  keywordsTimeContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 539.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keywordsTimeText: {
+    color: '#F5F5F5',
+    fontSize: 28,
+    fontWeight: '600',
+    letterSpacing: 0.56,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  keywordsWaveContainer: {
+    position: 'absolute',
+    top: 603,
+    width: 393,
+    height: 5,
+    overflow: 'hidden',
+  },
+  keywordsButtonsContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 674,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButton: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    width: 108,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  backButtonText: {
+    color: '#0B0B0C',
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: 0.44,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  keywordsNextButton: {
+    backgroundColor: '#B780FF',
+    borderRadius: 50,
+    paddingHorizontal: 32,
+    paddingVertical: 10,
+    width: 108,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  keywordsNextButtonText: {
+    color: '#0B0B0C',
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: 0.44,
     textAlign: 'center',
     fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
   },

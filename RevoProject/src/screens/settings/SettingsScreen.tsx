@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  Image,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
@@ -73,6 +74,8 @@ const SettingsScreen: FC = () => {
   const [recordNotifications, setRecordNotifications] = useState(false); // 기록 알림 설정
   const [showDaySelector, setShowDaySelector] = useState(false); // 요일 선택기 표시 여부
   const [selectedDays, setSelectedDays] = useState<string[]>([]); // 선택된 요일들
+  const [showFriendManagement, setShowFriendManagement] = useState(false); // 친구 관리 화면 표시 여부
+  const [friendManagementTitle, setFriendManagementTitle] = useState(''); // 친구 관리 화면 제목
   
   // 온보딩 완료 상태 확인 및 마지막 방문 화면 업데이트
   useEffect(() => {
@@ -222,6 +225,48 @@ const SettingsScreen: FC = () => {
         </View>
       )}
 
+      {/* 친구 설정 화면 헤더 */}
+      {settingsView === 'friends' && !showFriendManagement && (
+        <View style={styles.accessibilityHeader}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => setSettingsView('main')}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+              <path d="M14 27L0.999999 14L14 0.999998" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </TouchableOpacity>
+          <Text style={styles.accessibilityTitle}>
+            친구 설정
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      )}
+
+      {/* 친구 관리 화면 헤더 */}
+      {settingsView === 'friends' && showFriendManagement && (
+        <View style={styles.friendManagementHeader}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => setShowFriendManagement(false)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+              <path d="M14 27L0.999999 14L14 0.999998" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </TouchableOpacity>
+          {/* 검색창을 헤더 위치에 배치 */}
+          <View style={styles.headerSearchBox}>
+            <View style={[styles.searchIcon, { position: 'absolute', left: 12 }]}>
+              <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <Path d="M9.16667 15.8333C12.8486 15.8333 15.8333 12.8486 15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333Z" stroke="#A7A7A7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <Path d="M17.5 17.5L13.875 13.875" stroke="#A7A7A7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </Svg>
+            </View>
+            <Text style={styles.searchPlaceholder}>검색</Text>
+          </View>
+        </View>
+      )}
+
       {/* 기타 화면 헤더 */}
       {settingsView === 'etc' && (
         <View style={styles.accessibilityHeader}>
@@ -271,7 +316,10 @@ const SettingsScreen: FC = () => {
               <Text style={styles.settingItemText}>알림/리마인더</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.settingItem, { top: 243 }]}>
+            <TouchableOpacity 
+              style={[styles.settingItem, { top: 243 }]}
+              onPress={() => setSettingsView('friends')}
+            >
               <Text style={styles.settingItemText}>친구설정</Text>
             </TouchableOpacity>
             
@@ -412,7 +460,6 @@ const SettingsScreen: FC = () => {
             <PageIndicator 
               currentPage={accessibilityStep} 
               totalPages={5} 
-              top={753}
             />
           )}
         </>
@@ -458,7 +505,6 @@ const SettingsScreen: FC = () => {
           <PageIndicator 
             currentPage={privacyStep} 
             totalPages={2} 
-            top={753}
           />
         </>
       ) : settingsView === 'notifications' ? (
@@ -512,8 +558,104 @@ const SettingsScreen: FC = () => {
             <PageIndicator 
               currentPage={notificationStep} 
               totalPages={2} 
-              top={753}
             />
+          )}
+        </>
+      ) : settingsView === 'friends' ? (
+        <>
+          {!showFriendManagement ? (
+            <>
+              {/* 친구 설정 화면 */}
+              <View style={[styles.accessibilityContainer, { top: 198 }]}>
+                {/* 친구 차단 관리 카드 */}
+                <TouchableOpacity 
+                  style={styles.etcCard}
+                  onPress={() => {
+                    setFriendManagementTitle('친구 차단 관리');
+                    setShowFriendManagement(true);
+                  }}
+                >
+                  <Text style={styles.etcCardTitle}>친구 차단 관리</Text>
+                  <Text style={styles.etcCardDescription}>
+                    원하지 않는 친구를{'\n'}차단하고 관리할 수{'\n'}있어요
+                  </Text>
+                  <View style={styles.etcCardIcon}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+                      <path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </View>
+                </TouchableOpacity>
+
+                {/* 숨김 친구 관리 카드 */}
+                <TouchableOpacity 
+                  style={[styles.etcCard, { top: 262 }]}
+                  onPress={() => {
+                    setFriendManagementTitle('숨김 친구 관리');
+                    setShowFriendManagement(true);
+                  }}
+                >
+                  <Text style={styles.etcCardTitle}>숨김 친구 관리</Text>
+                  <Text style={styles.etcCardDescription}>
+                    목록에서 숨긴 친구를{'\n'}확인하고 관리할 수{'\n'}있어요
+                  </Text>
+                  <View style={styles.etcCardIcon}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="28" viewBox="0 0 15 28" fill="none">
+                      <path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              {/* 친구 관리 화면 - 친구 목록 */}
+              <View style={styles.friendManagementContainer}>
+                {/* 친구 카드 그리드 */}
+                <ScrollView 
+                  style={styles.friendGridContainer}
+                  contentContainerStyle={styles.friendGridContent}
+                >
+                  {/* 친구 카드들 - 2열 그리드 */}
+                  {[2, 1, 3, 4].map((friendId, index) => (
+                    <View key={friendId} style={[
+                      styles.friendCard,
+                      index % 2 === 0 ? styles.friendCardLeft : styles.friendCardRight
+                    ]}>
+                      {/* 프로필 이미지 영역 */}
+                      {friendId === 2 ? (
+                        <View style={styles.addFriendIconContainer}>
+                          <Text style={styles.addFriendText}>+</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.friendCardImageContainer}>
+                          <Image 
+                            source={require('../../../profileImage.png')}
+                            style={styles.friendCardImage}
+                            resizeMode="cover"
+                          />
+                        </View>
+                      )}
+                      
+                      {/* 친구 이름 */}
+                      {friendId !== 2 && (
+                        <View style={styles.friendCardContent}>
+                          <Text style={styles.friendCardName}>친구 {friendId}</Text>
+                          <TouchableOpacity style={styles.blockButton}>
+                            <Text style={styles.blockButtonText}>차단하기</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+
+                {/* 페이지바 - 1페이지로 고정 */}
+                <PageIndicator 
+                  currentPage={0} 
+                  totalPages={1} 
+                />
+              </View>
+            </>
           )}
         </>
       ) : settingsView === 'etc' ? (
@@ -566,11 +708,11 @@ const SettingsScreen: FC = () => {
             >
               <Text style={styles.daySelectorText}>{day}</Text>
               <View style={styles.daySelectorIcon}>
-                {selectedDays.includes(day) && (
+                <View style={styles.daySelectorIconRotate}>
                   <Svg width="15" height="28" viewBox="0 0 15 28" fill="none">
                     <Path d="M1 1L14 14L1 27" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </Svg>
-                )}
+                </View>
               </View>
             </TouchableOpacity>
           ))}
@@ -1171,6 +1313,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  daySelectorIconRotate: {
+    width: 15,
+    height: 28,
+  },
   // 기타 화면 스타일
   etcCard: {
     position: 'absolute',
@@ -1207,6 +1353,164 @@ const styles = StyleSheet.create({
     height: 28,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // 친구 관리 화면 스타일
+  friendManagementHeader: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 118,
+    height: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 24,
+    paddingRight: 24,
+  },
+  headerSearchBox: {
+    flex: 1,
+    height: 40,
+    backgroundColor: '#D9D9D9',
+    borderRadius: 20,
+    paddingLeft: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 24,
+    position: 'relative',
+  },
+  friendManagementContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 198, // 헤더 바로 아래 (118 + 40)
+    bottom: 0,
+  },
+  searchContainer: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    top: 0,
+    height: 40,
+  },
+  searchBox: {
+    flex: 1,
+    height: 40,
+    backgroundColor: '#D9D9D9',
+    borderRadius: 20,
+    paddingLeft: 52,
+    paddingRight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  searchPlaceholder: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#A7A7A7',
+    letterSpacing: 0.25,
+    flex: 1,
+    marginLeft: 12,
+  },
+  searchIcon: {
+    width: 20,
+    height: 20,
+    position: 'absolute',
+    left: 12,
+  },
+  backButtonIcon: {
+    width: 15,
+    height: 28,
+    position: 'absolute',
+    right: 12,
+    transform: [{ rotate: '270deg' }],
+  },
+  friendGridContainer: {
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    top: 0,
+    bottom: 92,
+  },
+  friendGridContent: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingBottom: 20,
+  },
+  friendCard: {
+    width: 168,
+    height: 250,
+    backgroundColor: '#3A3A3A',
+    borderRadius: 20,
+    marginBottom: 9,
+    position: 'relative',
+  },
+  friendCardLeft: {
+    marginRight: 9,
+  },
+  friendCardRight: {
+    marginLeft: 0,
+  },
+  friendCardImageContainer: {
+    position: 'absolute',
+    left: 35,
+    top: 24,
+    width: 99,
+    height: 99,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendCardImage: {
+    width: 99,
+    height: 99,
+    borderRadius: 49.5, // 원형으로 만들기 위해 너비/2
+    overflow: 'hidden',
+  },
+  addFriendIconContainer: {
+    position: 'absolute',
+    left: '50%',
+    top: 68, // 시각적으로 중앙에 위치하도록 미세 조정
+    width: 99,
+    height: 99,
+    marginLeft: -49.5, // 너비의 절반 (99 / 2)
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addFriendText: {
+    fontSize: 100,
+    fontWeight: '700',
+    color: '#F5F5F5',
+  },
+  friendCardContent: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 135,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendCardName: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#F5F5F5',
+    letterSpacing: 0.48,
+    lineHeight: 36,
+    marginBottom: 12,
+  },
+  blockButton: {
+    backgroundColor: '#B780FF',
+    borderWidth: 1,
+    borderColor: '#B780FF',
+    borderRadius: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blockButtonText: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#000000',
+    letterSpacing: 0.48,
   },
 });
 
