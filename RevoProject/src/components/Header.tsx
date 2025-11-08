@@ -10,10 +10,10 @@ const getSafeAreaTop = () => {
     // CSS env() 함수로 Safe Area 감지
     // @ts-ignore - 웹 환경 전용 코드
     const safeAreaTop = getComputedStyle(document.documentElement)
-      .getPropertyValue('--safe-area-inset-top') || '44px';
-    return parseInt(safeAreaTop.replace('px', '')) || 44;
+      .getPropertyValue('--safe-area-inset-top') || '64px';
+    return parseInt(safeAreaTop.replace('px', '')) || 64;
   }
-  return Platform.OS === 'ios' ? 44 : 20;
+  return Platform.OS === 'ios' ? 64 : 20;
 };
 
 interface HeaderProps {

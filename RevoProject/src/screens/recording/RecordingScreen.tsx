@@ -554,8 +554,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    width: 393,
-    height: 852,
+    width: 390,
+    height: 844,
     backgroundColor: '#000000',
   },
   dateContainer: {
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
   waveWrapper: {
     width: 393,
     height: 303, // 웨이브 SVG 높이 (overflow로 위아래만 보이게)
-    overflow: 'hidden',
+    // overflow: 'hidden',
     position: 'relative',
   },
   transcriptContainer: {

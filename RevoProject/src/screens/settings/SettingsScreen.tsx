@@ -877,8 +877,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    width: 393,
-    height: 852,
+    width: 390,
+    height: 844,
     backgroundColor: '#000000',
   },
   userInfoContainer: {
