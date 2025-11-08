@@ -11,6 +11,13 @@ ENV/
 # 업로드된 파일
 uploads/*
 
+# 데이터베이스
+*.db
+*.sqlite
+
+# 환경변수
+.env
+
 # Whisper 모델 캐시
 .whisper/
 

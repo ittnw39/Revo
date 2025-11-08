@@ -26,6 +26,13 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - serve from cache
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // API 요청은 Service Worker를 거치지 않고 직접 네트워크로
+  if (url.pathname.startsWith('/api/') || url.hostname === 'localhost' && url.port === '5000') {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

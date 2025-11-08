@@ -30,17 +30,30 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // 환경에 따라 경로 자동 설정
+          // 로컬 개발 환경에서는 Service Worker 비활성화 (API 요청 충돌 방지)
           const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-          const swPath = isLocalhost ? './sw.js' : '/Revo/sw.js';
+          const isDevelopment = window.location.port === '3000' || window.location.port === '8080';
           
-          navigator.serviceWorker.register(swPath)
-            .then((registration) => {
-              console.log('SW registered: ', registration);
-            })
-            .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
+          // 프로덕션 환경에서만 Service Worker 등록
+          if (!isDevelopment) {
+            const swPath = isLocalhost ? './sw.js' : '/Revo/sw.js';
+            
+            navigator.serviceWorker.register(swPath)
+              .then((registration) => {
+                console.log('SW registered: ', registration);
+              })
+              .catch((registrationError) => {
+                console.log('SW registration failed: ', registrationError);
+              });
+          } else {
+            // 개발 환경에서는 기존 Service Worker 제거
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+              registrations.forEach((registration) => {
+                registration.unregister();
+                console.log('Service Worker unregistered for development');
+              });
             });
+          }
         });
       }
     </script>

@@ -1,4 +1,4 @@
-import { FC, useEffect } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,16 +15,45 @@ import { RootStackParamList } from '../../types/navigation';
 import { useApp } from '../../contexts/AppContext';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
+import { getUserFromStorage, getUser } from '../../services/api';
 
 // iPhone 15, 15 Pro 크기 기준
-const screenWidth = 393;
-const screenHeight = 852;
+const screenWidth = 390;
+const screenHeight = 844;
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 
 const ProfileScreen: FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { isOnboardingCompleted } = useApp();
+  const [userName, setUserName] = useState<string>(''); // 기본값
+  
+  // 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        // 로컬 스토리지에서 사용자 정보 가져오기
+        const userInfo = getUserFromStorage();
+        if (userInfo) {
+          setUserName(userInfo.name);
+          
+          // 최신 정보를 위해 API에서도 가져오기 (선택사항)
+          try {
+            const response = await getUser(userInfo.id);
+            if (response.success && response.user) {
+              setUserName(response.user.name);
+            }
+          } catch (error) {
+            console.log('API에서 사용자 정보 가져오기 실패, 로컬 스토리지 사용:', error);
+          }
+        }
+      } catch (error) {
+        console.error('사용자 정보 로드 오류:', error);
+      }
+    };
+    
+    loadUserInfo();
+  }, []);
   
   // 온보딩 완료 상태 확인
   useEffect(() => {
@@ -50,7 +79,7 @@ const ProfileScreen: FC = () => {
 
       {/* 사용자명 */}
       <View style={styles.userNameContainer}>
-        <Text style={styles.userName}>홍시천사</Text>
+        <Text style={styles.userName}>{userName}</Text>
       </View>
 
       {/* 프로필 편집 버튼 */}

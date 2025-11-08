@@ -30,8 +30,8 @@ declare const window: Window;
 declare const navigator: Navigator;
 
 // iPhone 15, 15 Pro 크기 기준
-const screenWidth = 393;
-const screenHeight = 852;
+const screenWidth = 390;
+const screenHeight = 844;
 
 type RecordingScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Recording'>;
 

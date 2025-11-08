@@ -10,6 +10,7 @@ import {
   Animated,
   Platform,
   Easing,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,6 +20,7 @@ import NormalCharacter from '../../components/characters/NormalCharacter';
 import ExciteCharacter from '../../components/characters/ExciteCharacter';
 
 import { useApp } from '../../contexts/AppContext';
+import { createOrGetUser, saveUserToStorage, getUserFromStorage } from '../../services/api';
 
 // localStorage 타입 선언 (웹 환경용)
 declare const localStorage: {
@@ -28,21 +30,23 @@ declare const localStorage: {
 };
 
 // iPhone 15, 15 Pro 크기 기준
-const screenWidth = 393;
-const screenHeight = 852;
+const screenWidth = 390;
+const screenHeight = 844;
 
 type OnBoardingScreen2NavigationProp = NativeStackNavigationProp<RootStackParamList, 'OnBoarding'>;
 
 const OnBoardingScreen2: FC = () => {
   const navigation = useNavigation<OnBoardingScreen2NavigationProp>();
   const { setOnboardingCompleted } = useApp();
-  const [name, setName] = useState('감자');
+  const [name, setName] = useState('');
   const [currentStep, setCurrentStep] = useState(1); // 1: 이름, 2: 녹음설정, 3: 음성설정, 4: 제스처설정, 5: GPS설정, 6: 알람설정, 7: 설정완료
   const [recordingEnabled, setRecordingEnabled] = useState<boolean | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState<boolean | null>(null);
   const [gestureEnabled, setGestureEnabled] = useState<boolean | null>(null);
   const [gpsEnabled, setGpsEnabled] = useState<boolean | null>(null);
   const [alarmEnabled, setAlarmEnabled] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
 
   // 온보딩 2 로드 시 기존 설정 초기화
   useEffect(() => {
@@ -329,18 +333,66 @@ const OnBoardingScreen2: FC = () => {
     }
   }, [currentStep]);
 
+  // 사용자 이름 처리 함수
+  const handleNameSubmit = async () => {
+    if (!name.trim()) {
+      if (Platform.OS === 'web') {
+        window.alert('이름을 입력해주세요.');
+      } else {
+        Alert.alert('알림', '이름을 입력해주세요.');
+      }
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // 백엔드 API 호출하여 사용자 생성 또는 조회
+      const response = await createOrGetUser(name.trim());
+      
+      if (response.success) {
+        // 사용자 정보를 로컬 스토리지에 저장
+        saveUserToStorage(response.user);
+        setUserId(response.user.id);
+
+        // 기존 사용자면 마지막 단계로 바로 이동
+        if (response.message.includes('기존')) {
+          console.log('기존 사용자:', response.user.name);
+          setCurrentStep(7); // 마지막 단계로 바로 이동
+        } else {
+          console.log('새 사용자:', response.user.name);
+          // 새 사용자면 다음 단계로 진행
+          setTimeout(() => {
+            setCurrentStep(currentStep + 1);
+          }, 300);
+        }
+      }
+    } catch (error) {
+      console.error('사용자 생성/조회 오류:', error);
+      if (Platform.OS === 'web') {
+        window.alert('오류가 발생했습니다. 다시 시도해주세요.');
+      } else {
+        Alert.alert('오류', '오류가 발생했습니다. 다시 시도해주세요.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleNavigateToRecording = () => {
-    if (currentStep < totalSteps) {
+    if (currentStep === 1) {
+      // 첫 단계에서는 이름 처리
+      handleNameSubmit();
+    } else if (currentStep < totalSteps) {
       // 색 변화를 보여주기 위해 잠시 대기 후 다음 단계로 진행
       setTimeout(() => {
-      setCurrentStep(currentStep + 1);
+        setCurrentStep(currentStep + 1);
       }, 300);
     } else {
       // 온보딩 완료 시 저장소 정리
       const clearOnboardingData = () => {
         try {
           if (Platform.OS === 'web') {
-      localStorage.removeItem('onboardingStep');
+            localStorage.removeItem('onboardingStep');
           }
         } catch (error) {
           console.log('Error clearing onboarding data:', error);
@@ -350,7 +402,7 @@ const OnBoardingScreen2: FC = () => {
       clearOnboardingData();
       // Context를 통해 온보딩 완료 상태 설정
       setOnboardingCompleted(true);
-    navigation.navigate('Recording');
+      navigation.navigate('Recording');
     }
   };
 
@@ -392,9 +444,27 @@ const OnBoardingScreen2: FC = () => {
             <Text style={styles.subText}>뭐라고 불러드릴까요?</Text>
           </View>
 
-          {/* 이름 표시 */}
+          {/* 이름 입력 */}
           <View style={styles.nameContainer}>
-            <Text style={styles.nameText}>{name} 님</Text>
+            <TextInput
+              style={[
+                styles.nameText, 
+                { 
+                  width: Math.max(80, name.length * 50 + 30),
+                  maxWidth: screenWidth - 120,
+                  ...(Platform.OS === 'web' ? { outline: 'none' } : {})
+                }
+              ]}
+              value={name}
+              onChangeText={setName}
+              placeholder=""
+              placeholderTextColor="#888"
+              maxLength={10}
+              autoFocus={true}
+              editable={!isLoading}
+              underlineColorAndroid="transparent"
+            />
+            <Text style={styles.nameText}> 님</Text>
           </View>
         </>
       )}
@@ -853,12 +923,15 @@ const OnBoardingScreen2: FC = () => {
 
       {/* 다음 버튼 - 이름 설정 화면에서만 표시 */}
       {currentStep === 1 && (
-      <TouchableOpacity 
-          style={styles.nextButton}
-        onPress={handleNavigateToRecording}
-      >
-          <Text style={styles.nextButtonText}>다음</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.nextButton, (isLoading || !name.trim()) && styles.nextButtonDisabled]}
+          onPress={handleNavigateToRecording}
+          disabled={isLoading || !name.trim()}
+        >
+          <Text style={styles.nextButtonText}>
+            {isLoading ? '확인 중...' : '다음'}
+          </Text>
+        </TouchableOpacity>
       )}
 
     </SafeAreaView>
@@ -942,15 +1015,27 @@ const styles = StyleSheet.create({
   },
   nameContainer: {
     position: 'absolute',
-    left: '50%',
+    left: 0,
+    right: 0,
     top: '50%',
-    transform: [{ translateX: -90.5 }, { translateY: -26 }],
+    transform: [{ translateY: -26 }],
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  nameInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   nameText: {
     color: '#F5F5F5',
     fontSize: 60,
     fontWeight: '700',
     textAlign: 'center',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   nextButton: {
     position: 'absolute',
@@ -964,6 +1049,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  nextButtonDisabled: {
+    backgroundColor: '#555555',
+    opacity: 0.5,
   },
   nextButtonText: {
     color: '#000000',
