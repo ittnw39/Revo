@@ -84,6 +84,10 @@ module.exports = {
     new webpack.ProvidePlugin({
       React: 'react',
     }),
+    // 환경변수 주입 (빌드 타임에 주입됨)
+    new webpack.DefinePlugin({
+      'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL || 'http://localhost:5000/api'),
+    }),
   ],
   devServer: {
     static: {
