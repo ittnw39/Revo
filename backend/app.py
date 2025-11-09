@@ -19,7 +19,15 @@ from services import analyze_text_with_gpt, extract_keywords_simple
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS 설정 - 프로덕션 환경변수에서 허용할 도메인 가져오기
+allowed_origins = os.getenv('ALLOWED_ORIGINS', '*').split(',')
+if allowed_origins == ['*']:
+    # 개발 환경: 모든 도메인 허용
+    CORS(app)
+else:
+    # 프로덕션 환경: 특정 도메인만 허용
+    CORS(app, origins=allowed_origins)
 
 # 데이터베이스 설정
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///revo.db'

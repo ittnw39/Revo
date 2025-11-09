@@ -7,9 +7,12 @@ services:
       - "5000:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    env_file:
+      - .env
     volumes:
       - ./uploads:/app/uploads
-      - ./revo.db:/app/revo.db
+      - ./instance:/app/instance
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]

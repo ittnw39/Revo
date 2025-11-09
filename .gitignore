@@ -1,0 +1,4 @@
+# Markdown 문서 파일 (배포 가이드 등)
+*.md
+!README.md
+
