@@ -78,10 +78,20 @@ export const startSpeechRecognition = (
   }
 
   // 브라우저 호환성 확인
-  const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SpeechRecognitionConstructor = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
   
   if (!SpeechRecognitionConstructor) {
     onError(new Error('브라우저가 음성 인식을 지원하지 않습니다. Chrome 또는 Edge를 사용해주세요.'));
+    return null;
+  }
+
+  // HTTPS 또는 localhost 체크
+  const isSecureContext = window.location.protocol === 'https:' || 
+                          window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1';
+  
+  if (!isSecureContext) {
+    onError(new Error('음성 인식은 HTTPS 또는 localhost에서만 작동합니다. localhost로 접속해주세요.'));
     return null;
   }
 

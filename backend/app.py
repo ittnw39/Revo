@@ -142,11 +142,18 @@ def create_recording():
             return jsonify({'error': '오디오 파일이 없습니다.'}), 400
         
         file = request.files['audio']
-        user_id = request.form.get('user_id')
+        user_id_str = request.form.get('user_id')
         highlight_time = request.form.get('highlight_time')
+        frontend_transcript = request.form.get('transcript', '').strip()  # 프론트엔드에서 인식한 텍스트
         
-        if not user_id:
+        if not user_id_str:
             return jsonify({'error': '사용자 ID가 필요합니다.'}), 400
+        
+        # user_id를 정수로 변환
+        try:
+            user_id = int(user_id_str)
+        except (ValueError, TypeError):
+            return jsonify({'error': '사용자 ID가 올바르지 않습니다.'}), 400
         
         # 사용자 확인
         user = User.query.get(user_id)
@@ -161,27 +168,113 @@ def create_recording():
         
         # 파일 저장
         filename = secure_filename(file.filename)
+        if not filename:
+            # 파일명이 없으면 확장자만 사용
+            file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'webm'
+            filename = f"recording.{file_ext}"
+        
         unique_filename = f"{uuid.uuid4()}_{filename}"
-        filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
-        file.save(filepath)
+        
+        # 업로드 폴더 절대 경로
+        upload_dir = os.path.abspath(UPLOAD_FOLDER)
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        filepath = os.path.join(upload_dir, unique_filename)
+        
+        print(f"파일 저장 시작: {filename}")
+        print(f"저장 경로: {filepath}")
+        print(f"업로드 폴더 존재: {os.path.exists(upload_dir)}")
+        
+        try:
+            file.save(filepath)
+        except Exception as save_error:
+            print(f"파일 저장 오류: {str(save_error)}")
+            return jsonify({'error': f'파일 저장 실패: {str(save_error)}'}), 500
+        
+        # 파일 저장 확인
+        if not os.path.exists(filepath):
+            print(f"파일이 저장되지 않았습니다: {filepath}")
+            return jsonify({'error': '파일 저장에 실패했습니다.'}), 500
         
         # 파일 크기 확인
-        file_size = os.path.getsize(filepath)
+        try:
+            file_size = os.path.getsize(filepath)
+        except Exception as size_error:
+            print(f"파일 크기 확인 오류: {str(size_error)}")
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            return jsonify({'error': f'파일 크기 확인 실패: {str(size_error)}'}), 500
+        
         if file_size > MAX_FILE_SIZE:
             os.remove(filepath)
             return jsonify({'error': '파일 크기가 너무 큽니다. (최대 50MB)'}), 400
         
+        if file_size == 0:
+            os.remove(filepath)
+            return jsonify({'error': '빈 파일입니다.'}), 400
+        
         print(f"파일 업로드 완료: {unique_filename}")
+        print(f"파일 경로: {filepath}")
+        print(f"파일 크기: {file_size} bytes")
+        print(f"파일 존재 확인: {os.path.exists(filepath)}")
         
         # STT 처리
-        print("STT 처리 중...")
-        result = whisper_model.transcribe(filepath, language='ko')
-        transcript = result['text'].strip()
-        print(f"STT 완료: {transcript[:100]}...")
+        # 프론트엔드에서 인식한 텍스트가 있으면 우선 사용, 없으면 Whisper 사용
+        if frontend_transcript:
+            print("=" * 50)
+            print("프론트엔드에서 인식한 텍스트 사용")
+            print(f"프론트엔드 텍스트: {frontend_transcript}")
+            print("=" * 50)
+            transcript = frontend_transcript
+        else:
+            print("STT 처리 중... (Whisper 사용)")
+            print(f"Whisper에 전달할 파일 경로: {filepath}")
+            print(f"파일 절대 경로: {os.path.abspath(filepath)}")
+            
+            # 파일 존재 재확인
+            if not os.path.exists(filepath):
+                print(f"ERROR: 파일이 존재하지 않습니다: {filepath}")
+                return jsonify({'error': '파일을 찾을 수 없습니다.'}), 500
+            
+            try:
+                # ffmpeg 확인 (Windows에서 필요)
+                import subprocess
+                try:
+                    subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True, timeout=5)
+                    print("ffmpeg 확인 완료")
+                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                    print("경고: ffmpeg가 설치되어 있지 않거나 PATH에 없습니다.")
+                    print("webm 파일 처리를 위해 ffmpeg가 필요할 수 있습니다.")
+                
+                result = whisper_model.transcribe(filepath, language='ko')
+            except FileNotFoundError as e:
+                print(f"Whisper 파일 찾기 오류: {str(e)}")
+                print(f"시도한 경로: {filepath}")
+                print(f"파일 존재 여부: {os.path.exists(filepath)}")
+                if os.path.exists(filepath):
+                    print(f"파일은 존재하지만 Whisper가 찾지 못함 - ffmpeg 설치 필요할 수 있음")
+                return jsonify({'error': f'오디오 파일 처리 실패: {str(e)}. ffmpeg 설치가 필요할 수 있습니다.'}), 500
+            except Exception as whisper_error:
+                print(f"Whisper 처리 오류: {str(whisper_error)}")
+                import traceback
+                error_trace = traceback.format_exc()
+                print(error_trace)
+                return jsonify({'error': f'STT 처리 실패: {str(whisper_error)}'}), 500
+            transcript = result['text'].strip()
+            print(f"Whisper STT 완료: {transcript}")
+        
+        print(f"최종 사용 텍스트: {transcript}")
+        print(f"텍스트 길이: {len(transcript)}")
         
         # ChatGPT로 키워드 및 감정 분석
-        print("GPT 분석 중...")
+        print("=" * 50)
+        print("GPT 분석 시작...")
+        print(f"분석할 텍스트: {transcript}")
+        print("=" * 50)
         analysis = analyze_text_with_gpt(transcript)
+        print("=" * 50)
+        print(f"GPT 분석 완료 - 키워드: {analysis['keywords']}, 감정: {analysis['emotion'].value}")
+        print("=" * 50)
         
         # 키워드가 없으면 간단한 키워드 추출 사용
         if not analysis['keywords']:
@@ -214,13 +307,20 @@ def create_recording():
         
     except Exception as e:
         db.session.rollback()
+        import traceback
+        error_trace = traceback.format_exc()
         print(f"오류 발생: {str(e)}")
+        print(f"상세 오류:\n{error_trace}")
         # 실패 시 업로드된 파일 삭제
         if 'filepath' in locals() and os.path.exists(filepath):
-            os.remove(filepath)
+            try:
+                os.remove(filepath)
+            except:
+                pass
         return jsonify({
             'error': '처리 중 오류가 발생했습니다.',
-            'message': str(e)
+            'message': str(e),
+            'trace': error_trace if app.debug else None
         }), 500
 
 @app.route('/api/recordings', methods=['GET'])
@@ -329,6 +429,32 @@ def unlike_recording(recording_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/recordings/<int:recording_id>', methods=['PATCH'])
+def update_recording(recording_id):
+    """녹음 정보 업데이트 (하이라이트 시간 등)"""
+    try:
+        recording = Recording.query.get(recording_id)
+        if not recording:
+            return jsonify({'error': '녹음을 찾을 수 없습니다.'}), 404
+        
+        data = request.get_json()
+        
+        # 하이라이트 시간 업데이트
+        if 'highlight_time' in data:
+            recording.highlight_time = data['highlight_time']
+        
+        recording.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '녹음 정보가 업데이트되었습니다.',
+            'recording': recording.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 # ==================== 오디오 파일 API ====================
 
 @app.route('/api/audio/<filename>', methods=['GET'])
@@ -372,5 +498,16 @@ def get_emotion_stats():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+    # 서버 시작 시 API 키 확인
+    from services import get_client
+    print("=" * 50)
+    print("서버 시작 중...")
+    client = get_client()
+    if client:
+        print("✅ OpenAI API 클라이언트 준비 완료!")
+    else:
+        print("⚠️  OpenAI API 키가 없습니다. 기본 키워드 추출 방식을 사용합니다.")
+    print("=" * 50)
+    
     # 개발 서버 실행
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -385,14 +385,14 @@ const OnBoardingScreen2: FC = () => {
     } else if (currentStep < totalSteps) {
       // 색 변화를 보여주기 위해 잠시 대기 후 다음 단계로 진행
       setTimeout(() => {
-        setCurrentStep(currentStep + 1);
+      setCurrentStep(currentStep + 1);
       }, 300);
     } else {
       // 온보딩 완료 시 저장소 정리
       const clearOnboardingData = () => {
         try {
           if (Platform.OS === 'web') {
-            localStorage.removeItem('onboardingStep');
+      localStorage.removeItem('onboardingStep');
           }
         } catch (error) {
           console.log('Error clearing onboarding data:', error);
@@ -402,7 +402,7 @@ const OnBoardingScreen2: FC = () => {
       clearOnboardingData();
       // Context를 통해 온보딩 완료 상태 설정
       setOnboardingCompleted(true);
-      navigation.navigate('Recording');
+    navigation.navigate('Recording');
     }
   };
 
@@ -923,15 +923,15 @@ const OnBoardingScreen2: FC = () => {
 
       {/* 다음 버튼 - 이름 설정 화면에서만 표시 */}
       {currentStep === 1 && (
-        <TouchableOpacity 
+      <TouchableOpacity 
           style={[styles.nextButton, (isLoading || !name.trim()) && styles.nextButtonDisabled]}
-          onPress={handleNavigateToRecording}
+        onPress={handleNavigateToRecording}
           disabled={isLoading || !name.trim()}
-        >
+      >
           <Text style={styles.nextButtonText}>
             {isLoading ? '확인 중...' : '다음'}
           </Text>
-        </TouchableOpacity>
+      </TouchableOpacity>
       )}
 
     </SafeAreaView>

@@ -71,13 +71,15 @@ const Header: FC<HeaderProps> = ({ hideOnOnboarding = false, currentScreen, onSe
 const styles = StyleSheet.create({
   header: {
     position: 'absolute',
-    left: 16,
+    left: 0,
     top: 0,
-    right: 16,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: getSafeAreaTop(), // Safe Area 자동 감지
+    paddingHorizontal: 16,
+    backgroundColor: '#0A0A0A',
     zIndex: 1000,
   },
   logoContainer: {

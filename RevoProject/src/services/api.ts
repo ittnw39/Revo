@@ -53,7 +53,9 @@ class APIError extends Error {
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: '알 수 없는 오류가 발생했습니다.' }));
-    throw new APIError(error.error || '오류가 발생했습니다.', response.status);
+    const errorMessage = error.message || error.error || '오류가 발생했습니다.';
+    console.error('API 오류:', errorMessage, error);
+    throw new APIError(errorMessage, response.status);
   }
   return response.json();
 };
@@ -112,11 +114,13 @@ export const getUser = async (userId: number): Promise<{ success: boolean; user:
  * 녹음 업로드 및 분석
  * @param audioBlob - 오디오 Blob 객체
  * @param userId - 사용자 ID
+ * @param transcript - 프론트엔드에서 인식한 텍스트 (선택, 있으면 우선 사용)
  * @param highlightTime - 하이라이트 구간 (선택)
  */
 export const uploadRecording = async (
   audioBlob: Blob,
   userId: number,
+  transcript?: string,
   highlightTime?: string
 ): Promise<{ success: boolean; message: string; recording: Recording }> => {
   try {
@@ -124,6 +128,9 @@ export const uploadRecording = async (
     // @ts-ignore - React Native FormData 타입 문제
     formData.append('audio', audioBlob, 'recording.webm');
     formData.append('user_id', userId.toString());
+    if (transcript) {
+      formData.append('transcript', transcript);
+    }
     if (highlightTime) {
       formData.append('highlight_time', highlightTime);
     }
@@ -218,6 +225,33 @@ export const unlikeRecording = async (recordingId: number): Promise<{ success: b
     return handleResponse(response);
   } catch (error) {
     console.error('unlikeRecording error:', error);
+    throw error;
+  }
+};
+
+/**
+ * 녹음 정보 업데이트 (하이라이트 시간 등)
+ * @param recordingId - 녹음 ID
+ * @param highlightTime - 하이라이트 구간 (예: "1:30")
+ */
+export const updateRecording = async (
+  recordingId: number,
+  highlightTime?: string
+): Promise<{ success: boolean; message: string; recording: Recording }> => {
+  try {
+    const body: any = {};
+    if (highlightTime !== undefined) {
+      body.highlight_time = highlightTime;
+    }
+
+    const response = await fetch(`${API_URL}/recordings/${recordingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return handleResponse(response);
+  } catch (error) {
+    console.error('updateRecording error:', error);
     throw error;
   }
 };
@@ -333,6 +367,7 @@ export default {
   deleteRecording,
   likeRecording,
   unlikeRecording,
+  updateRecording,
   
   // 오디오
   getAudioUrl,
