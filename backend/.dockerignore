@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# 업로드된 파일
+uploads/*
+!uploads/.gitkeep
+
+# 데이터베이스
+*.db
+*.sqlite
+instance/
+
+# 환경변수
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# 기타
+.DS_Store
+*.log
+*.tmp
+
+# Whisper 모델 캐시 (런타임에 다운로드)
+.whisper/
+
+# 문서
+*.md
+!README.md
+
+# 테스트
+.pytest_cache/
+.coverage
+htmlcov/
+
