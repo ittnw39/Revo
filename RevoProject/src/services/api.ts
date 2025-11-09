@@ -4,10 +4,14 @@
  */
 
 // API 기본 URL 설정
-// @ts-ignore - 환경변수는 빌드 타임에 주입됨
-const API_URL = typeof process !== 'undefined' && process.env?.REACT_APP_API_URL 
+// 환경변수는 webpack DefinePlugin을 통해 빌드 타임에 주입됨
+// @ts-ignore
+const API_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_API_URL) 
   ? process.env.REACT_APP_API_URL 
   : 'http://localhost:5000/api';
+
+// 디버깅: 빌드된 값 확인
+console.log('API_URL:', API_URL);
 
 // ===== 타입 정의 =====
 
