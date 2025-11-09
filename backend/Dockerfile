@@ -38,5 +38,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 # gunicorn으로 실행 (프로덕션)
 # Railway는 PORT 환경변수를 제공하므로, 없으면 5000 사용
-CMD ["sh", "-c", "gunicorn -w 4 -b 0.0.0.0:${PORT:-5000} --timeout 300 app:app"]
+# 메모리 절약을 위해 워커 수를 1-2개로 제한
+CMD ["sh", "-c", "gunicorn -w 1 -b 0.0.0.0:${PORT:-5000} --timeout 300 --worker-class sync --worker-connections 1000 app:app"]
 
