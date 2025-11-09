@@ -87,7 +87,7 @@ module.exports = {
     // 환경변수 주입 (빌드 타임에 주입됨)
     new webpack.DefinePlugin({
       'process.env.REACT_APP_API_URL': JSON.stringify(
-        process.env.REACT_APP_API_URL || 'http://localhost:5000/api'
+        process.env.REACT_APP_API_URL || process.env.API_URL || 'http://localhost:5000/api'
       ),
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     }),
