@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 390,
     height: 844,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
   },
   titleContainer: {
     position: 'absolute',

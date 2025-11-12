@@ -23,6 +23,50 @@ export interface RecordingState {
 }
 
 /**
+ * iOS Safari 감지
+ */
+const isIOS = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const nav = navigator as any;
+  return /iPad|iPhone|iPod/.test(nav.userAgent || '') ||
+    (nav.platform === 'MacIntel' && nav.maxTouchPoints > 1);
+};
+
+/**
+ * 지원되는 MIME 타입 확인
+ */
+const getSupportedMimeType = (): string | null => {
+  if (typeof window === 'undefined' || !(window as any).MediaRecorder) {
+    return null;
+  }
+
+  const MediaRecorder = (window as any).MediaRecorder;
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/aac',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+    'audio/wav',
+  ];
+
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
+      console.log('지원되는 MIME 타입:', type);
+      return type;
+    }
+  }
+
+  // iOS Safari는 기본적으로 지원하지만 isTypeSupported가 false를 반환할 수 있음
+  if (isIOS()) {
+    return 'audio/mp4'; // iOS 기본 지원
+  }
+
+  return 'audio/webm'; // 기본값
+};
+
+/**
  * 텍스트에서 키워드 추출
  */
 const extractKeywords = (text: string, topicKeywords?: string[]): string[] => {
@@ -86,12 +130,13 @@ export const startSpeechRecognition = (
   }
 
   // HTTPS 또는 localhost 체크
-  const isSecureContext = window.location.protocol === 'https:' || 
-                          window.location.hostname === 'localhost' || 
-                          window.location.hostname === '127.0.0.1';
+  const location = (window as any).location;
+  const isSecureContext = location?.protocol === 'https:' || 
+                          location?.hostname === 'localhost' || 
+                          location?.hostname === '127.0.0.1';
   
   if (!isSecureContext) {
-    onError(new Error('음성 인식은 HTTPS 또는 localhost에서만 작동합니다. localhost로 접속해주세요.'));
+    onError(new Error('음성 인식은 HTTPS 또는 localhost에서만 작동합니다.'));
     return null;
   }
 
@@ -149,11 +194,13 @@ export const startSpeechRecognition = (
 
 /**
  * MediaRecorder를 사용한 오디오 녹음 (Promise 기반)
+ * iOS Safari 호환성 개선
  */
 export const startAudioRecording = async (): Promise<{
   mediaRecorder: MediaRecorder;
   chunks: Blob[];
   stream: MediaStream;
+  mimeType: string;
 }> => {
   // 웹 환경 체크
   if (typeof window === 'undefined' || !navigator.mediaDevices) {
@@ -162,29 +209,109 @@ export const startAudioRecording = async (): Promise<{
 
   const chunks: Blob[] = [];
 
-  // 마이크 접근 요청
-  const audioStream = await navigator.mediaDevices!.getUserMedia({ audio: true });
+  // 마이크 접근 요청 (iOS에서는 사용자 제스처 내에서만 작동)
+  let audioStream: MediaStream;
+  try {
+    audioStream = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      } 
+    });
+  } catch (error: any) {
+    console.error('getUserMedia 오류:', error);
+    throw new Error(`마이크 접근에 실패했습니다: ${error.message || error.name}`);
+  }
 
   // MediaRecorder 생성
   const MediaRecorderConstructor = (window as any).MediaRecorder;
   if (!MediaRecorderConstructor) {
     throw new Error('MediaRecorder를 지원하지 않는 브라우저입니다.');
   }
+
+  // 지원되는 MIME 타입 확인
+  const mimeType = getSupportedMimeType();
+  if (!mimeType) {
+    throw new Error('지원되는 오디오 형식을 찾을 수 없습니다.');
+  }
+
+  console.log('사용할 MIME 타입:', mimeType);
+  console.log('iOS 여부:', isIOS());
+
+  // MediaRecorder 옵션
+  const options: any = {};
   
-  const mediaRecorder = new MediaRecorderConstructor(audioStream, {
-    mimeType: 'audio/webm;codecs=opus'
-  });
+  // iOS Safari 호환성을 위한 설정
+  if (isIOS()) {
+    // iOS는 특정 옵션만 지원
+    options.mimeType = mimeType;
+  } else {
+    options.mimeType = mimeType;
+    // timeslice를 설정하여 주기적으로 데이터 수집 (안정성 향상)
+    options.audioBitsPerSecond = 128000;
+  }
+
+  let mediaRecorder: MediaRecorder;
+  try {
+    mediaRecorder = new MediaRecorderConstructor(audioStream, options);
+  } catch (error: any) {
+    console.error('MediaRecorder 생성 오류:', error);
+    // 옵션 없이 재시도
+    try {
+      mediaRecorder = new MediaRecorderConstructor(audioStream);
+      console.log('기본 옵션으로 MediaRecorder 생성 성공');
+    } catch (retryError: any) {
+      console.error('MediaRecorder 생성 재시도 실패:', retryError);
+      audioStream.getTracks().forEach(track => track.stop());
+      throw new Error(`MediaRecorder 생성 실패: ${retryError.message || retryError.name}`);
+    }
+  }
+
+  // 상태 확인
+  console.log('MediaRecorder 상태:', mediaRecorder.state);
+  console.log('MediaRecorder MIME 타입:', (mediaRecorder as any).mimeType || '기본값');
 
   mediaRecorder.ondataavailable = (event: BlobEvent) => {
-    if (event.data.size > 0) {
+    if (event.data && event.data.size > 0) {
+      console.log('오디오 데이터 수집:', event.data.size, 'bytes, 타입:', event.data.type);
       chunks.push(event.data);
     }
   };
 
-  // 녹음 시작
-  mediaRecorder.start();
+  // iOS에서는 onerror, onstart가 없을 수 있음
+  try {
+    (mediaRecorder as any).onerror = (event: any) => {
+      console.error('MediaRecorder 오류:', event.error || event);
+    };
+    (mediaRecorder as any).onstart = () => {
+      console.log('MediaRecorder 녹음 시작됨');
+    };
+    (mediaRecorder as any).onstop = () => {
+      console.log('MediaRecorder 녹음 중지됨, 총 청크 수:', chunks.length);
+    };
+  } catch (e) {
+    // iOS에서 지원하지 않을 수 있음
+    console.log('MediaRecorder 이벤트 핸들러 설정 실패 (무시 가능):', e);
+  }
 
-  return { mediaRecorder, chunks, stream: audioStream };
+  // 녹음 시작 (iOS에서는 timeslice를 사용하지 않음)
+  try {
+    if (isIOS()) {
+      // iOS는 timeslice 없이 시작
+      mediaRecorder.start();
+    } else {
+      // 다른 브라우저는 1초마다 데이터 수집
+      mediaRecorder.start(1000);
+    }
+    console.log('녹음 시작 명령 완료, 상태:', mediaRecorder.state);
+  } catch (error: any) {
+    console.error('녹음 시작 오류:', error);
+    audioStream.getTracks().forEach(track => track.stop());
+    throw new Error(`녹음 시작 실패: ${error.message || error.name}`);
+  }
+
+  return { mediaRecorder, chunks, stream: audioStream, mimeType };
 };
 
 /**
@@ -206,4 +333,3 @@ export const processRecordingResult = (
     timestamp: new Date().toISOString(),
   };
 };
-

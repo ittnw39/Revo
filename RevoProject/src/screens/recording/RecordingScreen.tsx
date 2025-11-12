@@ -79,6 +79,7 @@ const RecordingScreen: FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const mimeTypeRef = useRef<string>('audio/webm'); // 기본값
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcriptRef = useRef<string>('');
@@ -289,11 +290,12 @@ const RecordingScreen: FC = () => {
 
       // 오디오 녹음 시작 (비동기)
       try {
-        const { mediaRecorder, chunks, stream } = await startAudioRecording();
+        const { mediaRecorder, chunks, stream, mimeType } = await startAudioRecording();
         
         mediaRecorderRef.current = mediaRecorder;
         streamRef.current = stream;
         chunksRef.current = chunks;
+        mimeTypeRef.current = mimeType; // MIME 타입 저장
 
         // 녹음 상태 업데이트
         console.log('녹음 시작 - 상태 업데이트 전:', isRecording);
@@ -351,7 +353,11 @@ const RecordingScreen: FC = () => {
     // 오디오 Blob 생성 대기
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm', lastModified: Date.now() });
+        // 저장된 MIME 타입 사용 (iOS 호환성)
+        const mimeType = mimeTypeRef.current || 'audio/webm';
+        console.log('오디오 Blob 생성, MIME 타입:', mimeType, '청크 수:', chunksRef.current.length);
+        const audioBlob = new Blob(chunksRef.current, { type: mimeType, lastModified: Date.now() });
+        console.log('생성된 Blob 크기:', audioBlob.size, 'bytes');
         setAudioBlob(audioBlob);
 
     // 처리 완료 대기 (음성 인식 결과가 완전히 들어올 때까지)
@@ -666,21 +672,20 @@ const RecordingScreen: FC = () => {
     return 0;
   };
 
-  // 감정에 따른 색상 매핑
+  // 감정에 따른 색상 매핑 (6개: 행복, 놀람, 화남, 슬픔, 신남, 보통)
   const getEmotionColor = (emotion: string): string => {
     const emotionColorMap: { [key: string]: string } = {
-      '기쁨': '#FED046',
+      '행복': '#FED046',
       '슬픔': '#47AFF4',
       '놀람': '#F99841',
       '신남': '#EE47CA',
       '화남': '#EE4947',
       '보통': '#5CC463',
-      '당황': '#5CC463',      // 당황도 보통 색상 사용 (백엔드 호환성)
     };
     return emotionColorMap[emotion] || '#FED046';
   };
 
-  // 키워드 강조를 위한 텍스트 렌더링 (인라인 태그 방식)
+  // 키워드 강조를 위한 텍스트 렌더링 (컨테이너 포함)
   const renderHighlightedText = (text: string, keywords: string[], emotion?: string) => {
     if (!keywords || keywords.length === 0) {
       return (
@@ -786,6 +791,114 @@ const RecordingScreen: FC = () => {
             }
           })}
         </View>
+      </View>
+    );
+  };
+
+  // 키워드 강조를 위한 텍스트 렌더링 (컨테이너 없이 내용만)
+  const renderHighlightedTextContent = (text: string, keywords: string[], emotion?: string) => {
+    if (!keywords || keywords.length === 0) {
+      return (
+        <View style={styles.savedContentTextContainer}>
+          <Text style={styles.savedContentText}>{text}</Text>
+        </View>
+      );
+    }
+
+    // 감정에 따른 색상 가져오기
+    const emotionColor = emotion ? getEmotionColor(emotion) : '#FED046';
+
+    // 텍스트에서 키워드를 찾아서 하이라이트
+    // 키워드를 길이 순으로 정렬 (긴 키워드부터 매칭)
+    const sortedKeywords = [...keywords].filter(k => k && k.trim()).sort((a, b) => b.length - a.length);
+    
+    if (sortedKeywords.length === 0) {
+      return (
+        <View style={styles.savedContentTextContainer}>
+          <Text style={styles.savedContentText}>{text}</Text>
+        </View>
+      );
+    }
+
+    // 텍스트를 키워드 기준으로 분할
+    const parts: Array<{ text: string; isKeyword: boolean }> = [];
+    let remainingText = text;
+    
+    // 각 키워드의 위치를 찾아서 정렬
+    const matches: Array<{ keyword: string; index: number }> = [];
+    sortedKeywords.forEach(keyword => {
+      const trimmedKeyword = keyword.trim();
+      if (!trimmedKeyword) return;
+      
+      let searchIndex = 0;
+      while (true) {
+        const index = remainingText.indexOf(trimmedKeyword, searchIndex);
+        if (index === -1) break;
+        matches.push({ keyword: trimmedKeyword, index });
+        searchIndex = index + 1;
+      }
+    });
+    
+    // 인덱스 순으로 정렬
+    matches.sort((a, b) => a.index - b.index);
+    
+    // 겹치는 매치 제거 (긴 키워드 우선)
+    const nonOverlappingMatches: Array<{ keyword: string; index: number }> = [];
+    let lastEnd = -1;
+    
+    matches.forEach(match => {
+      const matchEnd = match.index + match.keyword.length;
+      if (match.index >= lastEnd) {
+        nonOverlappingMatches.push(match);
+        lastEnd = matchEnd;
+      }
+    });
+    
+    // 텍스트를 키워드와 일반 텍스트로 분할
+    let currentIndex = 0;
+    nonOverlappingMatches.forEach(match => {
+      // 키워드 이전의 일반 텍스트
+      if (match.index > currentIndex) {
+        const normalText = remainingText.substring(currentIndex, match.index);
+        if (normalText) {
+          parts.push({ text: normalText, isKeyword: false });
+        }
+      }
+      
+      // 키워드
+      parts.push({ text: match.keyword, isKeyword: true });
+      currentIndex = match.index + match.keyword.length;
+    });
+    
+    // 마지막 남은 텍스트
+    if (currentIndex < remainingText.length) {
+      const normalText = remainingText.substring(currentIndex);
+      if (normalText) {
+        parts.push({ text: normalText, isKeyword: false });
+      }
+    }
+    
+    // 매칭이 없으면 전체 텍스트 반환
+    if (parts.length === 0) {
+      parts.push({ text: remainingText, isKeyword: false });
+    }
+
+    return (
+      <View style={styles.savedContentTextContainer}>
+        {parts.map((part, index) => {
+          if (part.isKeyword) {
+            return (
+              <View key={index} style={[styles.savedKeywordTagInline, { backgroundColor: emotionColor }]}>
+                <Text style={styles.savedKeywordTextInline}>{part.text}</Text>
+              </View>
+            );
+          } else {
+            // 일반 텍스트는 그대로 표시
+            return (
+              <Text key={index} style={styles.savedNormalText}>{part.text}</Text>
+            );
+          }
+        })}
       </View>
     );
   };
@@ -1018,15 +1131,21 @@ const RecordingScreen: FC = () => {
             <Text style={styles.keywordsTitle}>이런 키워드가 들렸어요</Text>
           </View>
           
-          {/* 키워드 태그들 (세로 배치, 스크롤 가능) */}
+          {/* 감정과 키워드 태그들 (세로 배치, 스크롤 가능) */}
           <ScrollView 
             style={styles.keywordsTagsContainer}
             contentContainerStyle={styles.keywordsTagsContent}
             showsVerticalScrollIndicator={false}
           >
+            {/* 감정 태그 (첫 번째) */}
+            <View style={[styles.emotionKeywordTag, { backgroundColor: getEmotionColor(recordingData.emotion) }]}>
+              <Text style={styles.emotionKeywordText}>{recordingData.emotion}</Text>
+            </View>
+            
+            {/* 키워드 태그들 */}
             {recordingData.keywords && recordingData.keywords.length > 0 ? (
               recordingData.keywords.map((word, index) => (
-                <View key={index} style={styles.emotionKeywordTag}>
+                <View key={index} style={[styles.emotionKeywordTag, { backgroundColor: getEmotionColor(recordingData.emotion) }]}>
                   <Text style={styles.emotionKeywordText}>{word}</Text>
                 </View>
               ))
@@ -1283,8 +1402,8 @@ const RecordingScreen: FC = () => {
                 <Text style={styles.savedTitle}>녹음이 완료 되었어요</Text>
               </View>
               
-              {/* 감정 캐릭터 (기쁨) */}
-              {recordingData.emotion === '기쁨' && (
+              {/* 감정 캐릭터 (행복/기쁨) */}
+              {(recordingData.emotion === '행복' || recordingData.emotion === '기쁨') && (
                 <View style={styles.emotionCharacterContainer}>
                   {/* 노란색 원형 배경 */}
                   <View style={styles.characterCircleBackground} />
@@ -1351,8 +1470,17 @@ const RecordingScreen: FC = () => {
                 </TouchableOpacity>
               </View>
               
-              {/* 녹음 내용과 키워드 표시 */}
-              {renderHighlightedText(recordingData.content, recordingData.keywords || [], recordingData.emotion)}
+              {/* 감정과 녹음 내용 (인라인으로 표시) */}
+              <View style={styles.savedContentContainer}>
+                <View style={styles.savedContentTextContainer}>
+                  <Text style={styles.savedNormalText}>오늘은 </Text>
+                  <View style={[styles.savedEmotionTagInline, { backgroundColor: getEmotionColor(recordingData.emotion) }]}>
+                    <Text style={styles.savedEmotionTextInline}>{recordingData.emotion}</Text>
+                  </View>
+                </View>
+                {/* 녹음 내용 (키워드 하이라이트 포함) */}
+                {renderHighlightedTextContent(recordingData.content, recordingData.keywords || [], recordingData.emotion)}
+              </View>
               
               {/* 재생 바 - 두 번째 화면 하단에서 238 떨어진 위치 */}
               <View style={styles.savedWaveContainer}>
@@ -2028,6 +2156,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  savedEmotionContainer: {
+    paddingHorizontal: 24.25,
+    paddingTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  savedEmotionTag: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savedEmotionTagText: {
+    color: '#000000',
+    fontSize: 32,
+    fontWeight: '600',
+    letterSpacing: 1.28,
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
   savedUserAvatar: {
     width: 45,
     height: 45,
@@ -2085,7 +2233,7 @@ const styles = StyleSheet.create({
   },
   savedContentContainer: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 54, // 사용자 정보 영역과의 간격
   },
   savedContentTextContainer: {
     flexDirection: 'row',
@@ -2121,6 +2269,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1.6,
     marginHorizontal: 2,
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  savedEmotionTagInline: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginHorizontal: 2,
+    marginVertical: 2,
+  },
+  savedEmotionTextInline: {
+    color: '#000000',
+    fontSize: 40,
+    fontWeight: '600',
+    letterSpacing: 1.6,
     fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
   },
   savedHighlightMarker: {

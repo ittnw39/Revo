@@ -9,10 +9,10 @@ db = SQLAlchemy()
 
 class EmotionType(enum.Enum):
     """감정 타입 enum"""
-    JOY = "기쁨"
+    JOY = "행복"  # 기쁨을 행복으로 변경
     ANGER = "화남"
     SADNESS = "슬픔"
-    CONFUSION = "당황"
+    CONFUSION = "보통"  # 당황을 보통으로 변경
     SURPRISE = "놀람"
     EXCITEMENT = "신남"
 
