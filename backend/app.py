@@ -41,16 +41,10 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Whisper 모델 로드 (메모리 절약을 위해 tiny 모델 사용)
+# Whisper 모델 로드
 print("Whisper 모델 로딩 중...")
-try:
-    # Railway 메모리 제한을 고려하여 tiny 모델 사용 (가장 작은 모델)
-    whisper_model = whisper.load_model("tiny")
-    print("Whisper 모델 로드 완료! (tiny 모델 - 메모리 최적화)")
-except Exception as e:
-    print(f"Whisper 모델 로드 실패: {e}")
-    print("⚠️ Whisper 모델을 사용할 수 없습니다. 프론트엔드 STT만 사용됩니다.")
-    whisper_model = None
+whisper_model = whisper.load_model("base")
+print("Whisper 모델 로드 완료!")
 
 # 데이터베이스 초기화
 with app.app_context():
@@ -249,10 +243,6 @@ def create_recording():
             if not os.path.exists(filepath):
                 print(f"ERROR: 파일이 존재하지 않습니다: {filepath}")
                 return jsonify({'error': '파일을 찾을 수 없습니다.'}), 500
-            
-            # Whisper 모델이 없으면 에러 반환
-            if whisper_model is None:
-                return jsonify({'error': 'STT 서비스를 사용할 수 없습니다. 프론트엔드에서 텍스트를 인식해주세요.'}), 503
             
             try:
                 # ffmpeg 확인 (Windows에서 필요)

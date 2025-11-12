@@ -137,9 +137,9 @@ Vercel 프로젝트 설정 → Environment Variables:
 NEXT_PUBLIC_API_URL=http://your-ec2-ip:5000/api
 ```
 
-또는 프로덕션에서:
+프로덕션에서 (SSL 설정 후):
 ```
-NEXT_PUBLIC_API_URL=https://api.your-domain.com/api
+REACT_APP_API_URL=https://api.revoproject.me/api
 ```
 
 ### 5.3 프론트엔드 코드 예제
@@ -196,7 +196,7 @@ sudo nano /etc/nginx/sites-available/revo
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name api.revoproject.me;
 
     location /api {
         proxy_pass http://localhost:5000/api;
@@ -225,7 +225,7 @@ sudo systemctl restart nginx
 sudo apt install -y certbot python3-certbot-nginx
 
 # SSL 인증서 발급
-sudo certbot --nginx -d your-domain.com
+sudo certbot --nginx -d api.revoproject.me
 
 # 자동 갱신 테스트
 sudo certbot renew --dry-run
@@ -233,12 +233,17 @@ sudo certbot renew --dry-run
 
 ### 6.3 CORS 설정 업데이트
 
-`app.py` 수정:
+`.env` 파일에 추가:
+```env
+ALLOWED_ORIGINS=https://revo-lime.vercel.app,https://revoproject.me
+```
+
+또는 `app.py`에서 직접 설정:
 ```python
 # 특정 도메인만 허용
 CORS(app, origins=[
-    "https://your-vercel-app.vercel.app",
-    "https://your-custom-domain.com"
+    "https://revo-lime.vercel.app",
+    "https://revoproject.me"
 ])
 ```
 
