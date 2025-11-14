@@ -354,10 +354,23 @@ const OnBoardingScreen2: FC = () => {
         saveUserToStorage(response.user);
         setUserId(response.user.id);
 
-        // 기존 사용자면 마지막 단계로 바로 이동
+        // 기존 사용자면 바로 녹음 화면으로 이동
         if (response.message.includes('기존')) {
           console.log('기존 사용자:', response.user.name);
-          setCurrentStep(7); // 마지막 단계로 바로 이동
+          // 온보딩 데이터 정리
+          const clearOnboardingData = () => {
+            try {
+              if (Platform.OS === 'web') {
+                localStorage.removeItem('onboardingStep');
+              }
+            } catch (error) {
+              console.log('Error clearing onboarding data:', error);
+            }
+          };
+          clearOnboardingData();
+          // Context를 통해 온보딩 완료 상태 설정하고 녹음 화면으로 이동
+          setOnboardingCompleted(true);
+          navigation.navigate('Recording');
         } else {
           console.log('새 사용자:', response.user.name);
           // 새 사용자면 다음 단계로 진행
@@ -416,7 +429,7 @@ const OnBoardingScreen2: FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
       
       {/* 배경 프레임 */}
       <View style={styles.frame} />
