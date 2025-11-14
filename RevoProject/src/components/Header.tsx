@@ -4,16 +4,19 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 
+// iPhone 15, 15 Pro 크기 기준
+const screenWidth = 390;
+
 // 웹에서 Safe Area 감지
 const getSafeAreaTop = () => {
   if (Platform.OS === 'web') {
     // CSS env() 함수로 Safe Area 감지
     // @ts-ignore - 웹 환경 전용 코드
     const safeAreaTop = getComputedStyle(document.documentElement)
-      .getPropertyValue('--safe-area-inset-top') || '64px';
-    return parseInt(safeAreaTop.replace('px', '')) || 64;
+      .getPropertyValue('--safe-area-inset-top') || '66px';
+    return parseInt(safeAreaTop.replace('px', '')) || 66;
   }
-  return Platform.OS === 'ios' ? 64 : 20;
+  return Platform.OS === 'ios' ? 66 : 20;
 };
 
 interface HeaderProps {
@@ -73,14 +76,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    right: 0,
+    right: 0, // right: 0으로 설정하여 부모 컨테이너의 너비를 넘지 않도록
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: getSafeAreaTop(), // Safe Area 자동 감지
     paddingHorizontal: 16,
     backgroundColor: '#0A0A0A',
-    zIndex: 1000,
+    zIndex: 1000, // 높은 zIndex로 스크롤할 때도 보이도록 (오버레이 배경 1001보다 낮아서 오버레이가 덮음)
   },
   logoContainer: {
     width: 55,

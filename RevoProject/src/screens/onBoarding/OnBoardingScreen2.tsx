@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
   container: {
     width: screenWidth,
     height: screenHeight,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
     position: 'relative',
   },
   frame: {
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 390,
     height: 844,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
   },
   progressContainer: {
     position: 'absolute',

@@ -57,6 +57,13 @@ class Recording(db.Model):
     # 좋아요 수
     likes = db.Column(db.Integer, default=0)
     
+    # 업로드 여부
+    is_uploaded = db.Column(db.Boolean, default=False, nullable=False)
+    uploaded_at = db.Column(db.DateTime, nullable=True)  # 업로드 날짜
+    
+    # 위치 정보 (동/구)
+    district = db.Column(db.String(50), nullable=True)  # 예: "성북동", "강남구"
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -73,6 +80,9 @@ class Recording(db.Model):
             'emotion': self.emotion.value if self.emotion else None,
             'highlight_time': self.highlight_time,
             'likes': self.likes,
+            'is_uploaded': self.is_uploaded,
+            'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None,
+            'district': self.district,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }

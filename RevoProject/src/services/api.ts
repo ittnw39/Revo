@@ -32,6 +32,9 @@ export interface Recording {
   emotion: string;
   highlight_time: string | null;
   likes: number;
+  is_uploaded: boolean;
+  uploaded_at: string | null;
+  district: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -123,7 +126,8 @@ export const uploadRecording = async (
   audioBlob: Blob,
   userId: number,
   transcript?: string,
-  highlightTime?: string
+  highlightTime?: string,
+  district?: string
 ): Promise<{ success: boolean; message: string; recording: Recording }> => {
   try {
     const formData = new FormData();
@@ -135,6 +139,9 @@ export const uploadRecording = async (
     }
     if (highlightTime) {
       formData.append('highlight_time', highlightTime);
+    }
+    if (district) {
+      formData.append('district', district);
     }
 
     const response = await fetch(`${API_URL}/recordings`, {
@@ -150,16 +157,18 @@ export const uploadRecording = async (
 
 /**
  * 녹음 목록 조회 (피드)
- * @param options - 조회 옵션 (userId, limit)
+ * @param options - 조회 옵션 (userId, limit, isUploaded)
  */
 export const getRecordings = async (options?: {
   userId?: number;
   limit?: number;
+  isUploaded?: boolean;
 }): Promise<{ success: boolean; count: number; recordings: Recording[] }> => {
   try {
     const params = new URLSearchParams();
     if (options?.userId) params.append('user_id', options.userId.toString());
     if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.isUploaded !== undefined) params.append('is_uploaded', options.isUploaded.toString());
 
     const response = await fetch(`${API_URL}/recordings?${params}`);
     return handleResponse(response);
@@ -238,12 +247,16 @@ export const unlikeRecording = async (recordingId: number): Promise<{ success: b
  */
 export const updateRecording = async (
   recordingId: number,
-  highlightTime?: string
+  highlightTime?: string,
+  isUploaded?: boolean
 ): Promise<{ success: boolean; message: string; recording: Recording }> => {
   try {
     const body: any = {};
     if (highlightTime !== undefined) {
       body.highlight_time = highlightTime;
+    }
+    if (isUploaded !== undefined) {
+      body.is_uploaded = isUploaded;
     }
 
     const response = await fetch(`${API_URL}/recordings/${recordingId}`, {

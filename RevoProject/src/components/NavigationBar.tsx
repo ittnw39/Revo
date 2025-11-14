@@ -6,10 +6,12 @@ interface NavigationBarProps {
   onNavigateToRecords?: () => void;
   onNavigateToRecording?: () => void;
   onNavigateToProfile?: () => void;
-  currentPage?: 'Recording' | 'Records' | 'Profile';
+  onNavigateToFeed?: () => void;
+  onNavigateToArchive?: () => void;
+  currentPage?: 'Recording' | 'Records' | 'Profile' | 'Feed' | 'Archive';
 }
 
-const NavigationBar: FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigateToRecording, onNavigateToProfile, currentPage }) => {
+const NavigationBar: FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigateToRecording, onNavigateToProfile, onNavigateToFeed, onNavigateToArchive, currentPage }) => {
   const { setLastVisitedScreen } = useApp();
 
   const handleNavigateToRecords = () => {
@@ -26,6 +28,15 @@ const NavigationBar: FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigate
     setLastVisitedScreen('Profile');
     onNavigateToProfile?.();
   };
+
+  const handleNavigateToFeed = () => {
+    onNavigateToFeed?.();
+  };
+
+  const handleNavigateToArchive = () => {
+    setLastVisitedScreen('Archive');
+    onNavigateToArchive?.();
+  };
   return (
     <View style={styles.navigationBar}>
       <TouchableOpacity style={styles.navItem} onPress={handleNavigateToRecords}>
@@ -35,15 +46,15 @@ const NavigationBar: FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigate
         <Text style={[styles.navText, currentPage === 'Records' && styles.activeNavText]}>내기록</Text>
       </TouchableOpacity>
       
-      <View style={styles.navItem}>
+      <TouchableOpacity style={styles.navItem} onPress={handleNavigateToFeed}>
         <svg width="20" height="24" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19.4615 1H2.53846C1.68879 1 1 1.82655 1 2.84615V23.1538C1 24.1734 1.68879 25 2.53846 25H19.4615C20.3112 25 21 24.1734 21 23.1538V2.84615C21 1.82655 20.3112 1 19.4615 1Z" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M7 8H14.5" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M7 13H14.5" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M7 18H14.5" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M19.4615 1H2.53846C1.68879 1 1 1.82655 1 2.84615V23.1538C1 24.1734 1.68879 25 2.53846 25H19.4615C20.3112 25 21 24.1734 21 23.1538V2.84615C21 1.82655 20.3112 1 19.4615 1Z" stroke={currentPage === 'Feed' ? '#B780FF' : '#F5F5F5'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M7 8H14.5" stroke={currentPage === 'Feed' ? '#B780FF' : '#F5F5F5'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M7 13H14.5" stroke={currentPage === 'Feed' ? '#B780FF' : '#F5F5F5'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M7 18H14.5" stroke={currentPage === 'Feed' ? '#B780FF' : '#F5F5F5'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-        <Text style={styles.navText}>피드</Text>
-      </View>
+        <Text style={[styles.navText, currentPage === 'Feed' && styles.activeNavText]}>피드</Text>
+      </TouchableOpacity>
       
       <TouchableOpacity style={styles.navItem} onPress={handleNavigateToRecording}>
         <svg width="20" height="24" viewBox="0 0 22 26" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -53,13 +64,13 @@ const NavigationBar: FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigate
         <Text style={[styles.navText, currentPage === 'Recording' && styles.activeNavText]}>녹음</Text>
       </TouchableOpacity>
       
-      <View style={styles.navItem}>
+      <TouchableOpacity style={styles.navItem} onPress={handleNavigateToArchive}>
         <svg width="20" height="24" viewBox="0 0 23 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.044 1H5.94444C3.49194 1 1.5 3.08733 1.5 5.63051V22.5331C1.5 24.6924 2.98532 25.6041 4.80455 24.5604L10.4234 21.3094C11.0222 20.9616 11.9893 20.9616 12.5766 21.3094L18.1955 24.5604C20.0147 25.6161 21.5 24.7044 21.5 22.5331V5.63051C21.4885 3.08733 19.4965 1 17.044 1Z" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M8.45654 11.7778L10.1166 13.4444L14.5435 9" stroke="#F5F5F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M17.044 1H5.94444C3.49194 1 1.5 3.08733 1.5 5.63051V22.5331C1.5 24.6924 2.98532 25.6041 4.80455 24.5604L10.4234 21.3094C11.0222 20.9616 11.9893 20.9616 12.5766 21.3094L18.1955 24.5604C20.0147 25.6161 21.5 24.7044 21.5 22.5331V5.63051C21.4885 3.08733 19.4965 1 17.044 1Z" stroke={currentPage === 'Archive' ? '#B780FF' : '#F5F5F5'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8.45654 11.7778L10.1166 13.4444L14.5435 9" stroke={currentPage === 'Archive' ? '#B780FF' : '#F5F5F5'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-        <Text style={styles.navText}>아카이브</Text>
-      </View>
+        <Text style={[styles.navText, currentPage === 'Archive' && styles.activeNavText]}>아카이브</Text>
+      </TouchableOpacity>
       
       <TouchableOpacity style={styles.navItem} onPress={handleNavigateToProfile}>
         <View style={styles.profileImage} />
@@ -82,6 +93,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 12,
+    zIndex: 1000, // 다른 요소 위에 표시되도록
   },
   navItem: {
     alignItems: 'center',

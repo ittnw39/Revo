@@ -113,38 +113,57 @@ def analyze_text_with_gpt(text):
 
 "{text}"
 
-1. 감정 분석: 행복, 놀람, 화남, 슬픔, 신남, 보통 중 하나를 선택
-   - 맛있다, 좋다, 즐겁다, 행복하다, 기쁘다 -> 행복
-   - 놀랍다, 깜짝, 신기하다 -> 놀람
-   - 화나다, 짜증나다, 화났다 -> 화남
-   - 슬프다, 우울하다, 힘들다 -> 슬픔
-   - 신나다, 설레다, 두근거린다 -> 신남
-   - 특별한 감정이 없거나 중립적 -> 보통
+1. 감정 분석: 반드시 다음 6개 중 하나만 선택 (행복, 놀람, 화남, 슬픔, 신남, 보통)
+   
+   매핑 규칙:
+   - 행복: 맛있다, 좋다, 즐겁다, 행복하다, 기쁘다, 만족, 뿌듯, 기쁨, 행복
+   - 놀람: 놀랍다, 깜짝, 신기하다, 놀람, 깜짝 놀람
+   - 화남: 화나다, 짜증나다, 화났다, 분노, 화남, 화
+   - 슬픔: 슬프다, 우울하다, 힘들다, 외롭다, 외로움, 슬픔, 우울, 힘듦, 아쉽다, 그리움
+   - 신남: 신나다, 설레다, 두근거린다, 신남, 설렘, 두근거림
+   - 보통: 특별한 감정이 없거나 중립적, 평범, 보통, 무감정
+   
+   중요: 위에 나열된 감정 중 하나만 선택하세요. 다른 단어를 사용하지 마세요.
 
-2. 키워드 추출: 장소와 기분에 영향을 주는 구체적인 명사만 추출
-   - 장소: 성북동, 공원, 카페, 학교 등
-   - 기분에 영향을 주는 구체적인 대상: 아기고양이, 친구, 돈까스, 음식 등
-   - 조사 제거: "성북동에" -> "성북동", "아기고양이를" -> "아기고양이"
+2. 키워드 추출: 명사만 추출 (최대 3개)
+   기본 기준: 장소, 물건, 상황 (명사만!)
    
-   절대 추출하지 말 것:
+   - 장소: 성북동, 공원, 카페, 학교, 집, 회사 등 (명사)
+   - 물건: 돈까스, 아기고양이, 친구, 선물, 차, 생일 등 (명사)
+   - 상황: 만남, 이별, 축하, 사고 등 (명사)
+   
+   조사 제거: "성북동에" -> "성북동", "아기고양이를" -> "아기고양이"
+   
+   절대 추출하지 말 것 (명사가 아닌 것들):
    - 시간 관련 단어: 오늘, 어제, 내일, 지금, 그때 등
-   - 동사, 형용사, 동사구: 먹고 싶다, 가고 싶다, 좋다, 나쁘다 등
-   - 일반적인 단어: 길, 정말, 매우, 너무 등
-   - 추상적인 단어: 기분, 감정, 생각 등
+   - 동사: 먹다, 가다, 보다, 하다, 나갔다, 왔다 등
+   - 형용사: 좋다, 나쁘다, 맛있다, 외롭다, 슬프다, 기쁘다, 화나다 등 (절대 포함하지 마세요!)
+   - 부사: 정말, 매우, 너무, 잘, 좀 등
+   - 일반적인 단어: 길, 기분, 감정, 생각 등
    
-   반드시 명사만 추출하고, 문장에서 실제로 언급된 구체적인 대상이나 장소만 추출하세요.
+   중요: 
+   - 명사만 추출하세요. 형용사, 동사는 절대 포함하지 마세요.
+   - 감정 판단에 가장 중요한 순서대로 최대 3개만 추출하세요.
+   - 키워드가 많아도 3개를 초과하지 마세요.
 
 예시:
 텍스트: "오늘 성북동에 갔는데 길을 가다가 아기고양이를 봤다 정말 귀여웠고 기분이 좋아졌다"
 결과: {{"emotion": "행복", "keywords": ["성북동", "아기고양이"]}}
+설명: "정말", "귀여웠고", "좋아졌다"는 형용사/동사이므로 키워드에 포함하지 않음
 
 텍스트: "돈까스 먹어서 맛있다"
 결과: {{"emotion": "행복", "keywords": ["돈까스"]}}
+설명: "맛있다"는 형용사이므로 키워드에 포함하지 않음
+
+텍스트: "생일인데 집에서 혼자 외롭다"
+결과: {{"emotion": "슬픔", "keywords": ["생일", "집"]}}
+설명: "외롭다"는 형용사이므로 키워드에 포함하지 않음. "생일", "집"은 명사이므로 포함
 
 텍스트: "내일 돈까스 먹고 싶다"
 결과: {{"emotion": "행복", "keywords": ["돈까스"]}}
+설명: "내일"은 시간 관련 단어이므로 제외, "돈까스"만 포함
 
-JSON 형식:
+JSON 형식 (반드시 이 형식으로만 답변):
 {{
     "emotion": "행복",
     "keywords": ["성북동", "아기고양이"]
@@ -201,18 +220,41 @@ JSON 형식:
         emotion_str = result.get('emotion', '').strip()
         print(f"[GPT 분석] 추출된 감정 문자열: '{emotion_str}'")
         
-        # 감정 매핑 (대소문자 무시)
+        # 감정 매핑 (대소문자 무시, 유사 감정 매핑 포함)
         emotion_str_lower = emotion_str.lower()
         emotion = None
+        
+        # 직접 매핑 시도
         for key, value in emotion_map.items():
             if key.lower() == emotion_str_lower:
                 emotion = value
                 break
         
-        # 매핑 실패 시 기본값
+        # 직접 매핑 실패 시 유사 감정 매핑
         if emotion is None:
-            print(f"[GPT 분석] 감정 매핑 실패: '{emotion_str}' -> 기본값(놀람) 사용")
-            emotion = EmotionType.SURPRISE
+            # 외로움, 우울, 힘듦 등 -> 슬픔
+            if any(word in emotion_str_lower for word in ['외로', '우울', '힘들', '아쉽', '그리움', '슬픔']):
+                emotion = EmotionType.SADNESS
+                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 슬픔")
+            # 기쁨, 행복 등 -> 행복
+            elif any(word in emotion_str_lower for word in ['기쁨', '행복', '좋', '즐거', '만족']):
+                emotion = EmotionType.JOY
+                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 행복")
+            # 분노, 화 등 -> 화남
+            elif any(word in emotion_str_lower for word in ['분노', '화', '짜증']):
+                emotion = EmotionType.ANGER
+                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 화남")
+            # 신남, 설렘 등 -> 신남
+            elif any(word in emotion_str_lower for word in ['신남', '설렘', '두근']):
+                emotion = EmotionType.EXCITEMENT
+                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 신남")
+            # 놀람, 깜짝 등 -> 놀람
+            elif any(word in emotion_str_lower for word in ['놀람', '깜짝', '신기']):
+                emotion = EmotionType.SURPRISE
+                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 놀람")
+            else:
+                print(f"[GPT 분석] 감정 매핑 실패: '{emotion_str}' -> 기본값(놀람) 사용")
+                emotion = EmotionType.SURPRISE
         else:
             print(f"[GPT 분석] 감정 매핑 성공: '{emotion_str}' -> {emotion.value}")
         
@@ -223,6 +265,11 @@ JSON 형식:
             keywords = extract_keywords_simple(text)
         else:
             print(f"[GPT 분석] ChatGPT에서 키워드 추출 성공: {keywords}")
+        
+        # 키워드 최대 3개로 제한 (감정 판단에 가장 중요한 순서대로)
+        if len(keywords) > 3:
+            print(f"[GPT 분석] 키워드가 3개를 초과합니다 ({len(keywords)}개). 처음 3개만 사용합니다.")
+            keywords = keywords[:3]
         
         print(f"[GPT 분석] 최종 결과 - 키워드: {keywords}, 감정: {emotion.value}")
         
@@ -289,9 +336,9 @@ def extract_keywords_simple(text):
         if len(cleaned) >= 2 and cleaned not in stop_words:
             cleaned_words.append(cleaned)
     
-    # 빈도수 기반 키워드 추출 (최대 5개)
+    # 빈도수 기반 키워드 추출 (최대 3개)
     word_counts = Counter(cleaned_words)
-    keywords = [word for word, count in word_counts.most_common(5)]
+    keywords = [word for word, count in word_counts.most_common(3)]
     
     return keywords
 

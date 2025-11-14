@@ -35,16 +35,38 @@ import {
 
 // 웹 환경 전용 타입 선언
 declare const window: Window;
-declare const navigator: Navigator;
+declare const navigator: Navigator & {
+  geolocation?: {
+    getCurrentPosition: (
+      success: (position: { coords: { latitude: number; longitude: number } }) => void,
+      error: (error: any) => void,
+      options?: { timeout?: number; enableHighAccuracy?: boolean }
+    ) => void;
+  };
+};
 
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 390;
 const screenHeight = 844;
+const TOUCH_AREA_HEIGHT = 44; // 터치 가능한 영역
+const TIMELINE_WIDTH = 393; // 하이라이트 타임라인 너비 (하이라이트 수정 화면과 동일)
+const TIMELINE_HEIGHT = 5; // 하이라이트 타임라인 높이
+const MARKER_SIZE = 38; // 하이라이트 마커 크기
 
 type RecordingScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Recording'>;
 
 const RecordingScreen: FC = () => {
   const navigation = useNavigation<RecordingScreenNavigationProp>();
+  // 눈 애니메이션 상태 (1초마다 변경)
+  const [eyeAnimationState, setEyeAnimationState] = useState<number>(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setEyeAnimationState(prev => (prev === 0 ? 1 : 0));
+    }, 1000); // 1초마다 변경
+    
+    return () => clearInterval(interval);
+  }, []);
   const { isOnboardingCompleted } = useApp();
 
   // 녹음 상태
@@ -59,6 +81,9 @@ const RecordingScreen: FC = () => {
   // 백엔드에서 받은 녹음 데이터
   const [recordingData, setRecordingData] = useState<Recording | null>(null);
   
+  // 위치 정보
+  const [currentDistrict, setCurrentDistrict] = useState<string | null>(null);
+  
   // 화면 상태
   const [showKeywords, setShowKeywords] = useState(false);
   const [showHighlight, setShowHighlight] = useState(false);
@@ -66,13 +91,12 @@ const RecordingScreen: FC = () => {
   const [highlightTime, setHighlightTime] = useState<string>('');
   
   // 하이라이트 드래그 관련
-  const [highlightPosition, setHighlightPosition] = useState<number>(0); // 0-100 (퍼센트)
+  const [highlightTimeSeconds, setHighlightTimeSeconds] = useState<number>(0); // 하이라이트 시간 (초)
   const [showHighlightMarker, setShowHighlightMarker] = useState(false); // 하이라이트 마커 표시 여부
   const [highlightTimeInput, setHighlightTimeInput] = useState<string>(''); // 시간 입력 (MM:SS 형식)
   const highlightBarRef = useRef<View | null>(null);
-  const isDraggingRef = useRef<boolean>(false); // ref로 드래그 상태 관리 (클로저 문제 해결)
+  const isDraggingRef = useRef<boolean>(false);
   const [isDragging, setIsDragging] = useState(false);
-  const barLayoutRef = useRef<{ x: number; width: number } | null>(null); // 바의 좌표 저장 (예시 코드처럼)
 
   // 참조
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -85,12 +109,88 @@ const RecordingScreen: FC = () => {
   const transcriptRef = useRef<string>('');
   // 오디오 분석 ref 제거 (웨이브는 CSS 애니메이션 사용)
   
+  // GPS 위치 가져오기 및 동(구) 추출
+  const getCurrentLocation = async (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (Platform.OS === 'web') {
+        if (!navigator.geolocation) {
+          console.warn('Geolocation을 지원하지 않습니다.');
+          resolve(null);
+          return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+          async (position: { coords: { latitude: number; longitude: number } }) => {
+            try {
+              const { latitude, longitude } = position.coords;
+              console.log('위치 정보:', latitude, longitude);
+              
+              // OpenStreetMap Nominatim API를 사용한 역지오코딩 (무료)
+              try {
+                const response = await fetch(
+                  `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1&accept-language=ko`,
+                  {
+                    headers: {
+                      'User-Agent': 'RevoProject/1.0'
+                    }
+                  }
+                );
+                
+                if (response.ok) {
+                  const data = await response.json();
+                  const address = data.address;
+                  
+                  if (address) {
+                    // 한국 주소 형식: 동 또는 구 추출
+                    // address.quarter (동) 또는 address.city_district (구) 또는 address.suburb (구)
+                    const district = address.quarter || address.city_district || address.suburb || address.neighbourhood || null;
+                    
+                    if (district) {
+                      // "성북동" 또는 "강남구" 형식으로 반환
+                      resolve(district);
+                      return;
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('역지오코딩 API 오류:', error);
+              }
+              
+              // 실패한 경우 null 반환
+              resolve(null);
+            } catch (error) {
+              console.error('위치 정보 가져오기 오류:', error);
+              resolve(null);
+            }
+          },
+          (error: any) => {
+            console.error('GPS 오류:', error);
+            resolve(null);
+          },
+          { timeout: 10000, enableHighAccuracy: true }
+        );
+      } else {
+        // React Native 환경에서는 react-native-geolocation-service 등 사용 필요
+        resolve(null);
+      }
+    });
+  };
+
   // 온보딩 완료 상태 확인
   useEffect(() => {
     if (!isOnboardingCompleted) {
       navigation.navigate('OnBoarding');
     }
   }, [isOnboardingCompleted, navigation]);
+  
+  // 녹음 시작 시 위치 정보 가져오기
+  useEffect(() => {
+    if (isRecording) {
+      getCurrentLocation().then((district) => {
+        setCurrentDistrict(district);
+      });
+    }
+  }, [isRecording]);
 
   // 새로고침 시 화면 상태 복원
   useEffect(() => {
@@ -181,62 +281,6 @@ const RecordingScreen: FC = () => {
 
   // 웨이브 애니메이션은 CSS로 처리되므로 별도 정리 불필요
 
-  // 마우스/터치 이동 및 종료 이벤트 리스너 (예시 코드처럼 useEffect 사용)
-  useEffect(() => {
-    if (Platform.OS !== 'web') return; // 웹에서만 사용
-    
-    const handleMouseMove = (e: any) => {
-      if (isDraggingRef.current) {
-        handleMove(e.clientX);
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      isDraggingRef.current = false;
-    };
-
-    const handleTouchMove = (e: any) => {
-      if (isDraggingRef.current && e.touches && e.touches.length > 0) {
-        handleMove(e.touches[0].clientX);
-      }
-    };
-
-    const handleTouchEnd = () => {
-      setIsDragging(false);
-      isDraggingRef.current = false;
-    };
-
-    if (isDragging) {
-      // @ts-ignore - 웹 환경에서만 사용
-      const doc = typeof window !== 'undefined' ? window.document : null;
-      if (doc) {
-        // @ts-ignore
-        doc.addEventListener('mousemove', handleMouseMove);
-        // @ts-ignore
-        doc.addEventListener('mouseup', handleMouseUp);
-        // @ts-ignore
-        doc.addEventListener('touchmove', handleTouchMove);
-        // @ts-ignore
-        doc.addEventListener('touchend', handleTouchEnd);
-      }
-    }
-
-    return () => {
-      // @ts-ignore - 웹 환경에서만 사용
-      const doc = typeof window !== 'undefined' ? window.document : null;
-      if (doc) {
-        // @ts-ignore
-        doc.removeEventListener('mousemove', handleMouseMove);
-        // @ts-ignore
-        doc.removeEventListener('mouseup', handleMouseUp);
-        // @ts-ignore
-        doc.removeEventListener('touchmove', handleTouchMove);
-        // @ts-ignore
-        doc.removeEventListener('touchend', handleTouchEnd);
-      }
-    };
-  }, [isDragging]);
 
   // 날짜 표시
   const getCurrentDate = () => {
@@ -399,8 +443,11 @@ const RecordingScreen: FC = () => {
 
     setIsUploading(true);
     try {
-      // 프론트엔드에서 인식한 텍스트를 함께 전송
-      const response = await uploadRecording(audioBlob, user.id, frontendTranscript);
+      // 위치 정보 가져오기 (없으면 null)
+      const district = currentDistrict || await getCurrentLocation();
+      
+      // 프론트엔드에서 인식한 텍스트와 위치 정보를 함께 전송
+      const response = await uploadRecording(audioBlob, user.id, frontendTranscript, undefined, district || undefined);
       if (response.success) {
         setRecordingData(response.recording);
         // 키워드 화면으로 이동
@@ -421,29 +468,12 @@ const RecordingScreen: FC = () => {
     // 하이라이트 화면 진입 시 마커 숨김 및 상태 초기화
     setShowHighlightMarker(false);
     setHighlightTime('');
-    setHighlightPosition(0);
+    setHighlightTimeSeconds(0);
     setHighlightTimeInput('');
     setIsDragging(false);
     isDraggingRef.current = false; // ref도 초기화
   };
 
-  // 마커 위치 업데이트 함수 (예시 코드의 updateMarkerPosition과 유사)
-  const updateMarkerPosition = (position: number) => {
-    if (!result) return;
-    const time = positionToTime(position);
-    // 상태를 동시에 업데이트하여 깜빡임 방지
-    setHighlightPosition(position);
-    setHighlightTime(time);
-  };
-
-  // 시간을 위치로 변환 (분, 초 입력값을 퍼센트로 변환)
-  const timeToPosition = (minutes: number, seconds: number): number => {
-    if (!result) return 0;
-    const totalSeconds = Math.floor(result.duration);
-    const targetSeconds = minutes * 60 + seconds;
-    if (targetSeconds < 0 || targetSeconds > totalSeconds) return 0;
-    return (targetSeconds / totalSeconds) * 100;
-  };
 
   // 시간 입력 핸들러 (MM:SS 형식)
   const handleTimeInputChange = (text: string) => {
@@ -499,155 +529,124 @@ const RecordingScreen: FC = () => {
     if (!result) return;
     const mins = parseInt(minutes) || 0;
     const secs = parseInt(seconds) || 0;
-    const totalSeconds = Math.floor(result.duration);
+    const totalSeconds = result.duration;
     const totalMins = Math.floor(totalSeconds / 60);
-    const totalSecs = totalSeconds % 60;
+    const totalSecs = Math.ceil(totalSeconds % 60);
     
     // 입력값이 녹음 길이를 넘지 않도록 제한
     if (mins > totalMins || (mins === totalMins && secs > totalSecs)) {
       return;
     }
     
-    const position = timeToPosition(mins, secs);
-    updateMarkerPosition(position);
+    const targetSeconds = mins * 60 + secs;
+    setHighlightTimeSeconds(targetSeconds);
+    setHighlightTime(formatHighlightTime(targetSeconds));
     setShowHighlightMarker(true);
   };
 
-  // 하이라이트 위치를 시간으로 변환 (MM:SS 형식)
-  const positionToTime = (position: number): string => {
-    if (!result) return '00:00';
-    const totalSeconds = Math.floor(result.duration);
-    const targetSeconds = Math.floor((position / 100) * totalSeconds);
-    const mins = Math.floor(targetSeconds / 60);
-    const secs = targetSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  // 하이라이트 시간을 "MM:SS" 형식으로 변환
+  const formatHighlightTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // 바 클릭/터치 위치 계산 (barLayoutRef 사용, 예시 코드처럼)
-  const handleMove = (clientX: number) => {
-    if (!result || !barLayoutRef.current) return;
-    
-    const relativeX = clientX - barLayoutRef.current.x;
-    let position = (relativeX / barLayoutRef.current.width) * 100;
-    position = Math.max(0, Math.min(100, position));
-    updateMarkerPosition(position);
+  // 초를 "MM:SS" 형식으로 변환 (저장용 - 정수로 반올림)
+  const secondsToTimeString = (seconds: number): string => {
+    const roundedSeconds = Math.round(seconds); // 저장할 때만 반올림
+    const mins = Math.floor(roundedSeconds / 60);
+    const secs = roundedSeconds % 60;
+    return `${mins}:${secs}`;
   };
 
-  // 바 클릭 시 하이라이트 마커 표시 및 드래그 시작 (예시 코드처럼)
-  const handleBarClick = (event: any) => {
-    if (!result || !highlightBarRef.current) return;
+  // 마커 위치 계산 (픽셀) - 하이라이트 수정 화면과 동일
+  const getMarkerPosition = (): number => {
+    if (!result || result.duration === 0) return 0;
+    const totalSeconds = result.duration;
+    return (highlightTimeSeconds / totalSeconds) * TIMELINE_WIDTH;
+  };
+
+  // 위치에서 시간 계산 (0.01초 단위로 부드럽게) - 하이라이트 수정 화면과 동일
+  const updateTimeFromPosition = (clientX: number) => {
+    if (!result || !highlightBarRef.current || result.duration === 0) return;
     
-    // 터치/마우스 위치 가져오기 (touches 배열 사용)
-    let touchX: number;
     if (Platform.OS === 'web') {
-      touchX = (event as any).clientX || (event.nativeEvent as any).clientX || 0;
-    } else {
-      // 모바일: touches 배열 사용
-      const touches = event.nativeEvent?.touches || [];
-      if (touches.length > 0) {
-        touchX = touches[0].pageX || touches[0].locationX || 0;
-      } else {
-        touchX = event.nativeEvent.pageX || event.nativeEvent.locationX || 0;
-      }
-    }
-    
-    // 바의 좌표를 한 번만 측정하고 저장 (예시 코드처럼)
-    if (Platform.OS === 'web') {
-      // @ts-ignore - 웹 환경에서만 사용
       const element = highlightBarRef.current as any;
       if (element && typeof element.getBoundingClientRect === 'function') {
         const rect = element.getBoundingClientRect();
-        barLayoutRef.current = { x: rect.left, width: rect.width };
-        
-        // 즉시 마커 표시 및 위치 업데이트 (예시 코드처럼)
-        setShowHighlightMarker(true);
-        handleMove(touchX);
-        
-        // 드래그 시작
-        setIsDragging(true);
-        isDraggingRef.current = true;
+        const relativeX = clientX - rect.left;
+        const clampedX = Math.max(0, Math.min(TIMELINE_WIDTH, relativeX));
+        const totalSeconds = result.duration;
+        // 0.01초 단위로 계산 (소수점 2자리)
+        const newTime = Math.round(((clampedX / TIMELINE_WIDTH) * totalSeconds) * 100) / 100;
+        setHighlightTimeSeconds(newTime);
+        setHighlightTime(formatHighlightTime(newTime));
       }
     } else {
-      // 모바일: measure() 사용 (비동기)
-      // @ts-ignore - measure는 React Native의 메서드
-      highlightBarRef.current.measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
-        barLayoutRef.current = { x: px, width: width };
-        
-        // 즉시 마커 표시 및 위치 업데이트
-        setShowHighlightMarker(true);
-        handleMove(touchX);
-        
-        // 드래그 시작
-        setIsDragging(true);
-        isDraggingRef.current = true;
+      (highlightBarRef.current as any).measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
+        const relativeX = clientX - px;
+        const clampedX = Math.max(0, Math.min(TIMELINE_WIDTH, relativeX));
+        const totalSeconds = result.duration;
+        // 0.01초 단위로 계산 (소수점 2자리)
+        const newTime = Math.round(((clampedX / TIMELINE_WIDTH) * totalSeconds) * 100) / 100;
+        setHighlightTimeSeconds(newTime);
+        setHighlightTime(formatHighlightTime(newTime));
       });
     }
   };
 
-  // 하이라이트 드래그 시작 (마커를 직접 드래그할 때, 예시 코드처럼)
-  const handleHighlightDragStart = (event: any) => {
-    event.stopPropagation?.();
-    if (event.nativeEvent) {
-      event.nativeEvent.stopPropagation?.();
-    }
-    
-    if (!highlightBarRef.current) return;
-    
-    // 바의 좌표 저장 (예시 코드처럼)
-    if (Platform.OS === 'web') {
-      // @ts-ignore - 웹 환경에서만 사용
-      const element = highlightBarRef.current as any;
-      if (element && typeof element.getBoundingClientRect === 'function') {
-        const rect = element.getBoundingClientRect();
-        barLayoutRef.current = { x: rect.left, width: rect.width };
-      }
-    } else {
-      // 모바일: measure() 사용 (비동기)
-      // @ts-ignore - measure는 React Native의 메서드
-      highlightBarRef.current.measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
-        barLayoutRef.current = { x: px, width: width };
-      });
-    }
-    
+  // 통합 포인터 다운 핸들러 (마우스 + 터치)
+  const handlePointerDown = (e: any) => {
+    if (!result) return;
+    e.preventDefault?.();
     setIsDragging(true);
     isDraggingRef.current = true;
-    handleHighlightDrag(event);
-  };
-
-  // 하이라이트 드래그 중
-  const handleHighlightDrag = (event: any) => {
-    if (!result) return;
+    setShowHighlightMarker(true);
     
-    // 터치/마우스 위치 가져오기 (touches 배열 사용)
-    let touchX: number;
-    if (Platform.OS === 'web') {
-      touchX = (event as any).clientX || (event.nativeEvent as any).clientX || 0;
-    } else {
-      // 모바일: touches 배열 사용
-      const touches = event.nativeEvent?.touches || [];
-      if (touches.length > 0) {
-        touchX = touches[0].pageX || touches[0].locationX || 0;
-      } else {
-        touchX = event.nativeEvent.pageX || event.nativeEvent.locationX || 0;
-      }
+    // 초기 위치
+    const clientX = e.clientX || e.touches?.[0]?.clientX || e.nativeEvent?.touches?.[0]?.pageX;
+    if (clientX !== undefined) {
+      updateTimeFromPosition(clientX);
     }
     
-    // 위치 계산 및 업데이트
-    handleMove(touchX);
+    // 전역 이벤트 리스너
+    const handleMove = (moveEvent: any) => {
+      if (!isDraggingRef.current) return;
+      moveEvent.preventDefault?.();
+      const x = moveEvent.clientX || moveEvent.touches?.[0]?.clientX;
+      if (x !== undefined) {
+        updateTimeFromPosition(x);
+      }
+    };
+    
+    const handleEnd = () => {
+      setIsDragging(false);
+      isDraggingRef.current = false;
+      if (typeof window !== 'undefined' && window.document) {
+        const doc = window.document as any;
+        doc.removeEventListener('mousemove', handleMove);
+        doc.removeEventListener('mouseup', handleEnd);
+        doc.removeEventListener('touchmove', handleMove);
+        doc.removeEventListener('touchend', handleEnd);
+      }
+    };
+    
+    if (typeof window !== 'undefined' && window.document) {
+      const doc = window.document as any;
+      doc.addEventListener('mousemove', handleMove);
+      doc.addEventListener('mouseup', handleEnd);
+      doc.addEventListener('touchmove', handleMove, { passive: false });
+      doc.addEventListener('touchend', handleEnd);
+    }
   };
 
-  // 하이라이트 드래그 종료
-  const handleHighlightDragEnd = () => {
-    setIsDragging(false);
-    isDraggingRef.current = false; // ref도 업데이트
-  };
 
   // 하이라이트 설정 완료
   const handleHighlightSave = async () => {
     if (!recordingData) return;
 
     // 하이라이트 마커가 표시되어 있으면 시간 저장, 없으면 빈 문자열
-    const finalHighlightTime = showHighlightMarker ? (highlightTime || positionToTime(highlightPosition)) : '';
+    const finalHighlightTime = showHighlightMarker ? secondsToTimeString(highlightTimeSeconds) : '';
 
     try {
       const response = await updateRecording(recordingData.id, finalHighlightTime);
@@ -904,7 +903,41 @@ const RecordingScreen: FC = () => {
   };
 
   // 저장 완료 화면에서 저장 버튼
-  const handleFinalSave = () => {
+  // 업로드 버튼 핸들러 (is_uploaded = true)
+  const handleUpload = async () => {
+    if (!recordingData) return;
+
+    try {
+      const response = await updateRecording(recordingData.id, undefined, true);
+      if (response.success) {
+        // 업로드 완료 후 피드 화면으로 이동
+        navigation.navigate('Feed', { recordingId: recordingData.id });
+        // 상태 초기화
+        handleFinalSave();
+      }
+    } catch (error: any) {
+      console.error('업로드 저장 오류:', error);
+      Alert.alert('오류', '업로드 저장에 실패했습니다.');
+    }
+  };
+
+  // 저장 버튼 핸들러 (is_uploaded = false)
+  const handleFinalSave = async () => {
+    if (recordingData) {
+      try {
+        // 드래그로 변경된 하이라이트 시간이 있으면 저장
+        const finalHighlightTime = isDragging && highlightTimeSeconds > 0 
+          ? secondsToTimeString(highlightTimeSeconds) 
+          : recordingData.highlight_time || '';
+        
+        // 저장 시 is_uploaded를 false로 설정하고 하이라이트 시간 업데이트
+        await updateRecording(recordingData.id, finalHighlightTime, false);
+      } catch (error: any) {
+        console.error('저장 오류:', error);
+        // 저장 실패해도 화면은 초기화 (이미 서버에 저장되어 있을 수 있음)
+      }
+    }
+
     // 모든 상태 초기화
     setResult(null);
     setAudioBlob(null);
@@ -1142,15 +1175,22 @@ const RecordingScreen: FC = () => {
               <Text style={styles.emotionKeywordText}>{recordingData.emotion}</Text>
             </View>
             
-            {/* 키워드 태그들 */}
+            {/* 키워드 태그들 (최대 2개) */}
             {recordingData.keywords && recordingData.keywords.length > 0 ? (
-              recordingData.keywords.map((word, index) => (
+              recordingData.keywords.slice(0, 2).map((word, index) => (
                 <View key={index} style={[styles.emotionKeywordTag, { backgroundColor: getEmotionColor(recordingData.emotion) }]}>
                   <Text style={styles.emotionKeywordText}>{word}</Text>
                 </View>
               ))
             ) : (
               <Text style={styles.noKeywordsText}>키워드가 없습니다.</Text>
+            )}
+            
+            {/* 장소 태그 */}
+            {recordingData.district && (
+              <View style={[styles.emotionKeywordTag, { backgroundColor: getEmotionColor(recordingData.emotion) }]}>
+                <Text style={styles.emotionKeywordText}>{recordingData.district}</Text>
+              </View>
             )}
           </ScrollView>
           
@@ -1202,7 +1242,9 @@ const RecordingScreen: FC = () => {
           <NavigationBar 
             onNavigateToRecords={() => navigation.navigate('Records')} 
             onNavigateToRecording={() => navigation.navigate('Recording')} 
-            onNavigateToProfile={() => navigation.navigate('Profile')} 
+            onNavigateToProfile={() => navigation.navigate('Profile')}
+            onNavigateToFeed={() => navigation.navigate('Feed')}
+            onNavigateToArchive={() => navigation.navigate('Archive')}
             currentPage="Recording" 
           />
         </View>
@@ -1227,7 +1269,7 @@ const RecordingScreen: FC = () => {
           <View style={styles.highlightTimeContainer}>
             <TextInput
               style={styles.highlightTimeInput}
-              value={highlightTimeInput || (showHighlightMarker ? (highlightTime || positionToTime(highlightPosition)) : formatTime(Math.floor(result?.duration || 0)))}
+              value={highlightTimeInput || (showHighlightMarker ? highlightTime : formatTime(Math.floor(result?.duration || 0)))}
               onChangeText={handleTimeInputChange}
               placeholder={formatTime(Math.floor(result?.duration || 0))}
               placeholderTextColor="#666"
@@ -1250,91 +1292,55 @@ const RecordingScreen: FC = () => {
             />
           </View>
           
-          {/* 재생 바 (기본 녹음 화면과 같은 위치) */}
-          <View 
-            ref={highlightBarRef}
-            style={styles.highlightWaveContainer}
-            onTouchStart={(e) => {
-              if (Platform.OS !== 'web') {
-                // 모바일: 터치 시작
-                if (showHighlightMarker) {
-                  handleHighlightDragStart(e);
-                } else {
-                  handleBarClick(e);
-                }
-              }
-            }}
-            {...(Platform.OS === 'web' ? {
-              // @ts-ignore - 웹 전용 마우스 이벤트 (예시 코드처럼 onMouseDown만 사용)
-              onMouseDown: (e: any) => {
-                if (showHighlightMarker) {
-                  handleHighlightDragStart(e);
-                } else {
-                  handleBarClick(e);
-                }
-              },
-            } : {})}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width={screenWidth}
-              height="5"
-              viewBox={`0 0 ${screenWidth} 5`}
-              fill="none"
+          {/* 재생 바 (하이라이트 수정 화면과 동일한 구조) */}
+          <View style={styles.highlightTimelineContainer}>
+            <View 
+              ref={highlightBarRef}
+              style={styles.highlightTouchableArea}
+              {...(Platform.OS === 'web' ? {
+                // @ts-ignore - 웹 전용 이벤트
+                onMouseDown: handlePointerDown,
+                onTouchStart: handlePointerDown,
+              } : {
+                onTouchStart: handlePointerDown,
+              })}
             >
-              <path
-                d={`M0 2.5H${screenWidth}`}
-                stroke="#B780FF"
-                strokeWidth="5"
-              />
-            </svg>
-            
-            {/* 하이라이트 마커 (드래그 가능) - 바를 클릭했을 때만 표시 */}
-            {showHighlightMarker && (
-              <View 
-                style={[
-                  styles.highlightMarkerContainer,
-                  {
-                    left: `${highlightPosition}%`,
-                    transform: [{ translateX: -19.0022 }], // 마커 중심 정렬 (반지름 값)
-                  }
-                ]}
-                  {...(Platform.OS === 'web' ? {
-                    // @ts-ignore - 웹 전용 마우스 이벤트 (예시 코드처럼 onMouseDown만 사용)
-                    onMouseDown: (e: any) => {
-                      e.stopPropagation();
-                      handleHighlightDragStart(e);
-                    },
-                  } : {
-                    // 모바일: 터치 이벤트
-                    onTouchStart: (e: any) => {
-                      e.stopPropagation();
-                      handleHighlightDragStart(e);
-                    },
-                  })}
-              >
-              <View style={styles.highlightMarker}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38" fill="none">
-                  <circle cx="19.0022" cy="19.0022" r="19.0022" fill="#FFD630"/>
-                  <g filter="url(#filter0_d_266_160)">
-                    <path d="M17.5744 9.5735C18.0234 8.19153 19.9785 8.19153 20.4276 9.5735L21.7668 13.6954C21.9677 14.3134 22.5436 14.7318 23.1934 14.7318H27.5274C28.9805 14.7318 29.5847 16.5913 28.4091 17.4454L24.9028 19.9928C24.3771 20.3748 24.1571 21.0519 24.3579 21.6699L25.6972 25.7918C26.1462 27.1737 24.5645 28.3229 23.3889 27.4688L19.8827 24.9214C19.3569 24.5394 18.645 24.5394 18.1193 24.9214L14.613 27.4688C13.4375 28.3229 11.8557 27.1737 12.3048 25.7918L13.644 21.6699C13.8448 21.0518 13.6249 20.3748 13.0991 19.9928L9.59285 17.4454C8.41728 16.5913 9.02145 14.7318 10.4745 14.7318H14.8085C15.4584 14.7318 16.0343 14.3134 16.2351 13.6954L17.5744 9.5735Z" fill="#0C0B0D"/>
-                  </g>
-                  <defs>
-                    <filter id="filter0_d_266_160" x="4.97168" y="7.53705" width="28.0586" height="27.225" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
-                      <feFlood floodOpacity="0" result="BackgroundImageFix"/>
-                      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-                      <feOffset dy="3"/>
-                      <feGaussianBlur stdDeviation="2"/>
-                      <feComposite in2="hardAlpha" operator="out"/>
-                      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
-                      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_266_160"/>
-                      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_266_160" result="shape"/>
-                    </filter>
-                  </defs>
-                </svg>
-              </View>
+              {/* 실제 보이는 얇은 바 */}
+              <View style={styles.highlightTimelineBar} />
+              
+              {/* 하이라이트 마커 (드래그 가능) - 바를 클릭했을 때만 표시 */}
+              {showHighlightMarker && (
+                <View 
+                  style={[
+                    styles.highlightMarkerContainer,
+                    {
+                      left: getMarkerPosition() - MARKER_SIZE / 2, // 마커 중심 정렬
+                    }
+                  ]}
+                >
+                  <View style={styles.highlightMarker}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38" fill="none">
+                      <circle cx="19.0022" cy="19.0022" r="19.0022" fill="#FFD630"/>
+                      <g filter="url(#filter0_d_266_160)">
+                        <path d="M17.5744 9.5735C18.0234 8.19153 19.9785 8.19153 20.4276 9.5735L21.7668 13.6954C21.9677 14.3134 22.5436 14.7318 23.1934 14.7318H27.5274C28.9805 14.7318 29.5847 16.5913 28.4091 17.4454L24.9028 19.9928C24.3771 20.3748 24.1571 21.0519 24.3579 21.6699L25.6972 25.7918C26.1462 27.1737 24.5645 28.3229 23.3889 27.4688L19.8827 24.9214C19.3569 24.5394 18.645 24.5394 18.1193 24.9214L14.613 27.4688C13.4375 28.3229 11.8557 27.1737 12.3048 25.7918L13.644 21.6699C13.8448 21.0518 13.6249 20.3748 13.0991 19.9928L9.59285 17.4454C8.41728 16.5913 9.02145 14.7318 10.4745 14.7318H14.8085C15.4584 14.7318 16.0343 14.3134 16.2351 13.6954L17.5744 9.5735Z" fill="#0C0B0D"/>
+                      </g>
+                      <defs>
+                        <filter id="filter0_d_266_160" x="4.97168" y="7.53705" width="28.0586" height="27.225" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                          <feFlood floodOpacity="0" result="BackgroundImageFix"/>
+                          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+                          <feOffset dy="3"/>
+                          <feGaussianBlur stdDeviation="2"/>
+                          <feComposite in2="hardAlpha" operator="out"/>
+                          <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/>
+                          <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_266_160"/>
+                          <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_266_160" result="shape"/>
+                        </filter>
+                      </defs>
+                    </svg>
+                  </View>
+                </View>
+              )}
             </View>
-            )}
           </View>
           
           {/* 버튼들 */}
@@ -1371,7 +1377,9 @@ const RecordingScreen: FC = () => {
           <NavigationBar 
             onNavigateToRecords={() => navigation.navigate('Records')} 
             onNavigateToRecording={() => navigation.navigate('Recording')} 
-            onNavigateToProfile={() => navigation.navigate('Profile')} 
+            onNavigateToProfile={() => navigation.navigate('Profile')}
+            onNavigateToFeed={() => navigation.navigate('Feed')}
+            onNavigateToArchive={() => navigation.navigate('Archive')}
             currentPage="Recording" 
           />
         </View>
@@ -1411,32 +1419,30 @@ const RecordingScreen: FC = () => {
                   <View style={styles.characterWrapper}>
                     <View style={styles.characterEyesContainer}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="248" height="121" viewBox="0 0 248 121" fill="none">
-                        {/* 왼쪽 눈 */}
                         <circle cx="60.4724" cy="60.472" r="60.4719" fill="#F5F5F5"/>
-                        {/* 오른쪽 눈 */}
                         <circle cx="186.556" cy="60.472" r="60.4719" fill="#F5F5F5"/>
-                        
-                        {/* 왼쪽 눈 동공 마스크 */}
-                        <mask id="mask0_1330_24" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="0" y="0" width="121" height="121">
+                        <mask id="mask0_396_111" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="0" y="0" width="121" height="121">
                           <circle cx="60.4719" cy="60.4719" r="60.4719" fill="#F5F5F5"/>
                         </mask>
-                        <g mask="url(#mask0_1330_24)">
-                          <circle cx="10.0428" cy="60.4755" r="60.4755" fill="#0A0A0A"/>
+                        <g mask="url(#mask0_396_111)">
+                          {eyeAnimationState === 0 ? (
+                            <circle cx="10.0428" cy="60.4755" r="60.4755" fill="#0A0A0A"/>
+                          ) : (
+                            <circle cx="60.4755" cy="60.4755" r="60.4755" transform="matrix(-1 0 0 1 169.288 0)" fill="#0A0A0A"/>
+                          )}
                         </g>
-                        
-                        {/* 오른쪽 눈 동공 마스크 */}
-                        <mask id="mask1_1330_24" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="126" y="0" width="122" height="121">
+                        <mask id="mask1_396_111" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="126" y="0" width="122" height="121">
                           <circle cx="186.557" cy="60.4719" r="60.4719" fill="#F5F5F5"/>
                         </mask>
-                        <g mask="url(#mask1_1330_24)">
-                          <circle cx="136.126" cy="60.4755" r="60.4755" fill="#0A0A0A"/>
+                        <g mask="url(#mask1_396_111)">
+                          {eyeAnimationState === 0 ? (
+                            <circle cx="136.126" cy="60.4755" r="60.4755" fill="#0A0A0A"/>
+                          ) : (
+                            <circle cx="60.4755" cy="60.4755" r="60.4755" transform="matrix(-1 0 0 1 299.289 0)" fill="#0A0A0A"/>
+                          )}
                         </g>
-                        
-                        {/* 왼쪽 눈 하이라이트 */}
-                        <path d="M82.8553 71.1475C82.8553 75.208 81.2423 79.1023 78.3711 81.9735C75.4999 84.8447 71.6056 86.4578 67.5451 86.4578C63.4846 86.4578 59.5904 84.8447 56.7191 81.9735C53.8479 79.1023 52.2349 75.2081 52.2349 71.1475L67.5451 71.1475H82.8553Z" fill="#F5F5F5"/>
-                        
-                        {/* 오른쪽 눈 하이라이트 */}
-                        <path d="M208.94 71.1475C208.94 75.208 207.327 79.1023 204.456 81.9735C201.585 84.8447 197.691 86.4578 193.63 86.4578C189.57 86.4578 185.675 84.8447 182.804 81.9735C179.933 79.1023 178.32 75.2081 178.32 71.1475L193.63 71.1475H208.94Z" fill="#F5F5F5"/>
+                        <path d="M36.0001 71.1475C36.0001 75.208 37.6132 79.1023 40.4844 81.9735C43.3556 84.8447 47.2498 86.4578 51.3104 86.4578C55.3709 86.4578 59.2651 84.8447 62.1363 81.9735C65.0076 79.1023 66.6206 75.2081 66.6206 71.1475L51.3104 71.1475H36.0001Z" fill="#F5F5F5"/>
+                        <path d="M166 71.1475C166 75.208 167.613 79.1023 170.484 81.9735C173.356 84.8447 177.25 86.4578 181.31 86.4578C185.371 86.4578 189.265 84.8447 192.136 81.9735C195.008 79.1023 196.621 75.2081 196.621 71.1475L181.31 71.1475H166Z" fill="#F5F5F5"/>
                       </svg>
                     </View>
                     {/* 입 - 화면 기준 top: 291.68 */}
@@ -1453,10 +1459,100 @@ const RecordingScreen: FC = () => {
                   </View>
                 </View>
               )}
+              
+              {/* 감정 캐릭터 (슬픔) */}
+              {recordingData.emotion === '슬픔' && (
+                <View style={styles.sadEmotionCharacterContainer}>
+                  {/* 슬픔 색상 사각형 배경 */}
+                  <View style={[styles.sadCharacterBackground, { backgroundColor: getEmotionColor('슬픔') }]} />
+                  {/* 슬픔 캐릭터 SVG */}
+                  <View style={styles.sadCharacterWrapper}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="393" height="534" viewBox="0 0 393 534" fill="none" style={{ width: '100%', height: '100%' }}>
+                      {/* 슬픔 캐릭터 SVG - 배경 rect는 제외하고 캐릭터만 (배경은 별도 렌더링) */}
+                      <circle cx="140.233" cy="108.908" r="53.9077" fill="#F5F5F5"/>
+                      <circle cx="252.631" cy="108.908" r="53.9077" fill="#F5F5F5"/>
+                      <mask id="mask0_sad_recording" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="86" y="55" width="109" height="108">
+                        <circle cx="140.232" cy="108.908" r="53.9077" fill="#F5F5F5"/>
+                      </mask>
+                      <g mask="url(#mask0_sad_recording)">
+                        {eyeAnimationState === 0 ? (
+                          <circle cx="181.984" cy="108.911" r="53.9108" fill="#0A0A0A"/>
+                        ) : (
+                          <circle cx="140.232" cy="108.911" r="53.9108" transform="matrix(-1 0 0 1 280.464 0)" fill="#0A0A0A"/>
+                        )}
+                      </g>
+                      <mask id="mask1_sad_recording" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="198" y="55" width="109" height="108">
+                        <circle cx="252.631" cy="108.908" r="53.9077" fill="#F5F5F5"/>
+                      </mask>
+                      <g mask="url(#mask1_sad_recording)">
+                        {eyeAnimationState === 0 ? (
+                          <circle cx="291.17" cy="108.911" r="53.9108" fill="#0A0A0A"/>
+                        ) : (
+                          <circle cx="252.631" cy="108.911" r="53.9108" transform="matrix(-1 0 0 1 505.262 0)" fill="#0A0A0A"/>
+                        )}
+                      </g>
+                      <path d="M100.777 133.678H124.919C133.755 133.678 140.919 140.842 140.919 149.678V321.6C140.919 330.437 133.755 337.6 124.919 337.6H116.777C107.94 337.6 100.777 330.437 100.777 321.6V133.678Z" fill="#F5F5F5"/>
+                      <rect x="254.921" y="144.918" width="32.9243" height="95.7798" rx="16.4621" fill="#F5F5F5"/>
+                      <path d="M211.568 174.927C211.568 158.87 182.666 158.067 182.666 174.927" stroke="#0A0A0A" strokeWidth="8.02842" strokeLinecap="round"/>
+                      <path d="M144.111 120.03C144.111 123.65 142.673 127.121 140.113 129.681C137.554 132.241 134.082 133.678 130.463 133.678C126.843 133.678 123.371 132.241 120.812 129.681C118.252 127.121 116.814 123.65 116.814 120.03L130.463 120.03H144.111Z" fill="#F5F5F5"/>
+                      <path d="M254.922 120.03C254.922 123.65 253.484 127.121 250.924 129.681C248.365 132.24 244.893 133.678 241.273 133.678C237.654 133.678 234.182 132.24 231.622 129.681C229.063 127.121 227.625 123.65 227.625 120.03L241.273 120.03H254.922Z" fill="#F5F5F5"/>
+                    </svg>
+                  </View>
+                </View>
+              )}
+              
+              {/* 감정 캐릭터 (신남) */}
+              {recordingData.emotion === '신남' && (
+                <View style={styles.excitedEmotionCharacterContainer}>
+                  {/* 신남 캐릭터 SVG (별 모양 배경 포함) */}
+                  <View style={styles.excitedCharacterWrapper}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" fill="none" style={{ width: '100%', height: '100%' }}>
+                      <path d="M315.663 17.6931C316.625 13.4338 322.694 13.4338 323.657 17.6931L365.107 201.195C365.73 203.956 368.898 205.268 371.291 203.757L530.357 103.311C534.049 100.98 538.34 105.271 536.009 108.963L435.563 268.029C434.052 270.422 435.364 273.589 438.124 274.213L621.627 315.663C625.886 316.625 625.886 322.694 621.627 323.657L438.124 365.107C435.364 365.73 434.052 368.898 435.563 371.291L536.009 530.357C538.34 534.049 534.049 538.34 530.357 536.009L371.291 435.563C368.898 434.052 365.73 435.364 365.107 438.124L323.657 621.627C322.694 625.886 316.625 625.886 315.663 621.627L274.213 438.124C273.589 435.364 270.422 434.052 268.029 435.563L108.963 536.009C105.271 538.34 100.98 534.049 103.311 530.357L203.757 371.291C205.268 368.898 203.956 365.73 201.195 365.107L17.6931 323.657C13.4338 322.694 13.4338 316.625 17.6931 315.663L201.195 274.213C203.956 273.589 205.268 270.422 203.757 268.029L103.311 108.963C100.98 105.271 105.271 100.98 108.963 103.311L268.029 203.757C270.422 205.268 273.589 203.956 274.213 201.195L315.663 17.6931Z" fill={getEmotionColor('신남')}/>
+                      <circle cx="260.594" cy="263.941" r="56.5281" fill="#F5F5F5"/>
+                      <circle cx="378.455" cy="263.941" r="56.5281" fill="#F5F5F5"/>
+                      <mask id="mask0_excited_recording" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="204" y="207" width="114" height="114">
+                        <circle cx="260.594" cy="263.941" r="56.5281" fill="#F5F5F5"/>
+                      </mask>
+                      <g mask="url(#mask0_excited_recording)">
+                        {eyeAnimationState === 0 ? (
+                          <circle cx="210.164" cy="263.944" r="56.5314" fill="#0A0A0A"/>
+                        ) : (
+                          <circle cx="56.5314" cy="263.944" r="56.5314" transform="matrix(-1 0 0 1 521.188 0)" fill="#0A0A0A"/>
+                        )}
+                      </g>
+                      <mask id="mask1_excited_recording" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="321" y="207" width="114" height="114">
+                        <circle cx="378.455" cy="263.941" r="56.5281" fill="#F5F5F5"/>
+                      </mask>
+                      <g mask="url(#mask1_excited_recording)">
+                        {eyeAnimationState === 0 ? (
+                          <circle cx="328.025" cy="263.944" r="56.5314" fill="#0A0A0A"/>
+                        ) : (
+                          <circle cx="56.5314" cy="263.944" r="56.5314" transform="matrix(-1 0 0 1 756.91 0)" fill="#0A0A0A"/>
+                        )}
+                      </g>
+                      <path d="M281.517 273.921C281.517 277.716 280.009 281.356 277.325 284.04C274.641 286.724 271.001 288.232 267.205 288.232C263.41 288.232 259.769 286.724 257.085 284.04C254.401 281.356 252.894 277.716 252.894 273.921L267.205 273.921H281.517Z" fill="#F5F5F5"/>
+                      <path d="M399.379 273.921C399.379 277.716 397.871 281.356 395.187 284.04C392.503 286.724 388.863 288.232 385.067 288.232C381.271 288.232 377.631 286.724 374.947 284.04C372.263 281.356 370.755 277.716 370.755 273.921L385.067 273.921H399.379Z" fill="#F5F5F5"/>
+                      <mask id="path-10-inside-1_excited_recording" fill="white">
+                        <path d="M331.686 313.371C326.698 328.308 314.998 337.86 305.554 334.707C296.11 331.553 292.497 316.887 297.485 301.95L297.485 301.948L331.686 313.369L331.686 313.371Z"/>
+                      </mask>
+                      <path d="M331.686 313.371C326.698 328.308 314.998 337.86 305.554 334.707C296.11 331.553 292.497 316.887 297.485 301.95L297.485 301.948L331.686 313.369L331.686 313.371Z" fill="#0A0A0A"/>
+                      <path d="M331.686 313.371L333.629 314.02L333.629 314.02L331.686 313.371ZM305.554 334.707L304.905 336.65L304.905 336.65L305.554 334.707ZM297.485 301.95L295.542 301.301L295.542 301.301L297.485 301.95ZM297.485 301.948L298.134 300.005L296.191 299.356L295.542 301.299L297.485 301.948ZM331.686 313.369L333.63 314.018L334.278 312.075L332.335 311.426L331.686 313.369ZM331.686 313.371L329.743 312.722C327.352 319.88 323.38 325.656 318.995 329.236C314.587 332.836 310.024 334.04 306.203 332.764L305.554 334.707L304.905 336.65C310.528 338.528 316.537 336.532 321.587 332.41C326.659 328.268 331.031 321.798 333.629 314.02L331.686 313.371ZM305.554 334.707L306.203 332.764C302.382 331.488 299.458 327.784 298.096 322.257C296.742 316.761 297.037 309.757 299.428 302.599L297.485 301.95L295.542 301.301C292.944 309.08 292.551 316.878 294.118 323.237C295.677 329.567 299.282 334.772 304.905 336.65L305.554 334.707ZM297.485 301.95L299.428 302.599L299.429 302.597L297.485 301.948L295.542 301.299L295.542 301.301L297.485 301.95ZM297.485 301.948L296.836 303.891L331.038 315.312L331.686 313.369L332.335 311.426L298.134 300.005L297.485 301.948ZM331.686 313.369L329.743 312.72L329.743 312.722L331.686 313.371L333.629 314.02L333.63 314.018L331.686 313.369Z" fill="black" mask="url(#path-10-inside-1_excited_recording)"/>
+                    </svg>
+                  </View>
+                </View>
+              )}
             </View>
             
             {/* 두 번째 화면: 상세 정보 화면 */}
             <View style={styles.savedBottomScreen}>
+              {/* 하이라이트 시간 초기화 (녹음 완료 화면 진입 시) */}
+              {(() => {
+                if (recordingData.highlight_time && result && highlightTimeSeconds === 0) {
+                  const initialHighlightSeconds = parseHighlightTime(recordingData.highlight_time);
+                  setHighlightTimeSeconds(initialHighlightSeconds);
+                }
+                return null;
+              })()}
               {/* 사용자 정보 영역 - 이름과 업로드 버튼 */}
               <View style={styles.savedUserContainer}>
                 <View style={styles.savedUserAvatar}>
@@ -1465,12 +1561,12 @@ const RecordingScreen: FC = () => {
                   </Text>
                 </View>
                 <Text style={styles.savedUserName}>{recordingData.user_name}</Text>
-                <TouchableOpacity style={styles.uploadButton}>
+                <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
                   <Text style={styles.uploadButtonText}>업로드</Text>
                 </TouchableOpacity>
               </View>
               
-              {/* 감정과 녹음 내용 (인라인으로 표시) */}
+              {/* 감정과 키워드 (인라인으로 표시) */}
               <View style={styles.savedContentContainer}>
                 <View style={styles.savedContentTextContainer}>
                   <Text style={styles.savedNormalText}>오늘은 </Text>
@@ -1478,42 +1574,62 @@ const RecordingScreen: FC = () => {
                     <Text style={styles.savedEmotionTextInline}>{recordingData.emotion}</Text>
                   </View>
                 </View>
-                {/* 녹음 내용 (키워드 하이라이트 포함) */}
-                {renderHighlightedTextContent(recordingData.content, recordingData.keywords || [], recordingData.emotion)}
+                {/* 키워드만 표시 (최대 2개) */}
+                {recordingData.keywords && recordingData.keywords.length > 0 && (
+                  <View style={styles.savedKeywordsContainer}>
+                    {recordingData.keywords.slice(0, 2).map((keyword, index) => (
+                      <View 
+                        key={index} 
+                        style={[styles.savedKeywordTagInline, { backgroundColor: getEmotionColor(recordingData.emotion) }]}
+                      >
+                        <Text style={styles.savedKeywordTextInline}>{keyword}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {/* 위치 정보 표시 (키워드처럼 배경색 추가) */}
+                {recordingData.district && (
+                  <View style={styles.locationContainer}>
+                    <View style={[styles.locationTag, { backgroundColor: getEmotionColor(recordingData.emotion) }]}>
+                      <Text style={styles.locationText}>{recordingData.district}</Text>
+                    </View>
+                    <Text style={styles.savedNormalText}>에서</Text>
+                  </View>
+                )}
               </View>
               
               {/* 재생 바 - 두 번째 화면 하단에서 238 떨어진 위치 */}
-              <View style={styles.savedWaveContainer}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width={screenWidth}
-                  height="5"
-                  viewBox={`0 0 ${screenWidth} 5`}
-                  fill="none"
-                >
-                  <path
-                    d={`M0 2.5H${screenWidth}`}
-                    stroke="#B780FF"
-                    strokeWidth="5"
-                  />
-                </svg>
+              <View 
+                ref={highlightBarRef}
+                style={styles.savedTouchableArea}
+                {...(Platform.OS === 'web' ? {
+                  // @ts-ignore - 웹 전용 이벤트
+                  onMouseDown: handlePointerDown,
+                  onTouchStart: handlePointerDown,
+                } : {
+                  onTouchStart: handlePointerDown,
+                })}
+              >
+                {/* 실제 보이는 얇은 바 */}
+                <View style={styles.savedWaveBar} />
                 
-                {/* 하이라이트 마커 (있으면 표시) - 녹음 본 길이로 계산 */}
+                {/* 하이라이트 마커 (있으면 표시) - 드래그 가능 */}
                 {recordingData.highlight_time && result && (() => {
-                  const highlightSeconds = parseHighlightTime(recordingData.highlight_time);
+                  // 드래그 중이면 highlightTimeSeconds 사용, 아니면 저장된 highlight_time 사용
+                  const currentHighlightSeconds = isDragging ? highlightTimeSeconds : parseHighlightTime(recordingData.highlight_time);
                   const totalSeconds = Math.max(result.duration, 1);
-                  const percentage = (highlightSeconds / totalSeconds) * 100;
+                  const markerPosition = (currentHighlightSeconds / totalSeconds) * TIMELINE_WIDTH;
+                  
                   return (
                     <View 
                       style={[
                         styles.savedHighlightMarker,
                         {
-                          left: `${percentage}%`,
-                          transform: [{ translateX: -19.0022 }],
+                          left: markerPosition - MARKER_SIZE / 2, // 마커 중심 정렬
                         }
                       ]}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38" fill="none">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38" fill="none" style={{ pointerEvents: 'none' }}>
                         <circle cx="19.0022" cy="19.0022" r="19.0022" fill="#FFD630"/>
                         <g filter="url(#filter0_d_266_160)">
                           <path d="M17.5744 9.5735C18.0234 8.19153 19.9785 8.19153 20.4276 9.5735L21.7668 13.6954C21.9677 14.3134 22.5436 14.7318 23.1934 14.7318H27.5274C28.9805 14.7318 29.5847 16.5913 28.4091 17.4454L24.9028 19.9928C24.3771 20.3748 24.1571 21.0519 24.3579 21.6699L25.6972 25.7918C26.1462 27.1737 24.5645 28.3229 23.3889 27.4688L19.8827 24.9214C19.3569 24.5394 18.645 24.5394 18.1193 24.9214L14.613 27.4688C13.4375 28.3229 11.8557 27.1737 12.3048 25.7918L13.644 21.6699C13.8448 21.0518 13.6249 20.3748 13.0991 19.9928L9.59285 17.4454C8.41728 16.5913 9.02145 14.7318 10.4745 14.7318H14.8085C15.4584 14.7318 16.0343 14.3134 16.2351 13.6954L17.5744 9.5735Z" fill="#0C0B0D"/>
@@ -1552,7 +1668,9 @@ const RecordingScreen: FC = () => {
           <NavigationBar 
             onNavigateToRecords={() => navigation.navigate('Records')} 
             onNavigateToRecording={() => navigation.navigate('Recording')} 
-            onNavigateToProfile={() => navigation.navigate('Profile')} 
+            onNavigateToProfile={() => navigation.navigate('Profile')}
+            onNavigateToFeed={() => navigation.navigate('Feed')}
+            onNavigateToArchive={() => navigation.navigate('Archive')}
             currentPage="Recording" 
           />
         </View>
@@ -1563,7 +1681,9 @@ const RecordingScreen: FC = () => {
         <NavigationBar 
           onNavigateToRecords={() => navigation.navigate('Records')} 
           onNavigateToRecording={() => navigation.navigate('Recording')} 
-          onNavigateToProfile={() => navigation.navigate('Profile')} 
+          onNavigateToProfile={() => navigation.navigate('Profile')}
+          onNavigateToFeed={() => navigation.navigate('Feed')}
+          onNavigateToArchive={() => navigation.navigate('Archive')}
           currentPage="Recording" 
         />
       )}
@@ -1576,7 +1696,7 @@ const styles = StyleSheet.create({
   container: {
     width: screenWidth,
     height: screenHeight,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
     position: 'relative',
   },
   frame: {
@@ -1585,7 +1705,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 390,
     height: 844,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
   },
   dateContainer: {
     position: 'absolute',
@@ -1968,7 +2088,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: screenWidth,
     height: screenHeight,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
   },
   highlightTitle: {
     color: '#FFFFFF',
@@ -1979,26 +2099,42 @@ const styles = StyleSheet.create({
   },
   highlightMarkerContainer: {
     position: 'absolute',
-    top: -16.5, // 바 중앙에 위치 (바 top: 603, 바 높이: 5, 마커 높이: 38.004, 따라서 (38.004-5)/2 = 16.5)
-    zIndex: 10,
-    width: 38.004,
-    height: 38.004,
+    top: (TOUCH_AREA_HEIGHT - MARKER_SIZE) / 2, // 터치 영역 중앙에 위치
+    width: MARKER_SIZE,
+    height: MARKER_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none', // 마커는 터치 안받음
   },
   highlightMarker: {
-    width: 38.004,
-    height: 38.004,
+    width: MARKER_SIZE,
+    height: MARKER_SIZE,
     flexShrink: 0,
   },
-  highlightWaveContainer: {
+  // 하이라이트 타임라인 컨테이너 (하이라이트 수정 화면과 동일)
+  highlightTimelineContainer: {
     position: 'absolute',
-    top: 603, // 기본 녹음 화면의 waveContainer와 동일한 위치
     left: 0,
+    top: 603,
     right: 0,
-    width: screenWidth, // 화면 너비에 맞춤
-    height: 5, // 기본 바 높이와 동일
-    flexShrink: 0,
-    overflow: 'visible', // 마커가 보이도록
-    alignSelf: 'center', // 화면 중앙 정렬
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 핵심: 터치 가능한 큰 영역! (하이라이트 수정 화면과 동일)
+  highlightTouchableArea: {
+    width: TIMELINE_WIDTH,
+    height: TOUCH_AREA_HEIGHT, // 44px!
+    justifyContent: 'center',
+    position: 'relative',
+    cursor: 'pointer',
+  },
+  // 실제 보이는 얇은 바 (하이라이트 수정 화면과 동일)
+  highlightTimelineBar: {
+    width: TIMELINE_WIDTH,
+    height: TIMELINE_HEIGHT, // 5px
+    backgroundColor: '#B780FF',
+    position: 'absolute',
+    alignSelf: 'center',
   },
   highlightTimeContainer: {
     position: 'absolute',
@@ -2077,7 +2213,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: screenWidth,
     height: screenHeight,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
   },
   savedTitle: {
     color: '#FFFFFF',
@@ -2093,6 +2229,14 @@ const styles = StyleSheet.create({
     width: 598,
     height: 598,
   },
+  sadEmotionCharacterContainer: {
+    position: 'absolute',
+    left: -1, // Figma 기준: left: -1px
+    top: 318,
+    width: 598,
+    height: 856.632, // 슬픔일 때 높이 증가
+    overflow: 'hidden',
+  },
   characterCircleBackground: {
     position: 'absolute',
     width: 598,
@@ -2101,6 +2245,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FED046',
     left: 0,
     top: 0,
+  },
+  sadCharacterBackground: {
+    position: 'absolute',
+    left: 0, // Figma 기준: left: -1px (container 기준으로는 0)
+    top: 0,
+    width: 395.049,
+    height: 856.632,
+    borderRadius: 24.95,
+    backgroundColor: '#47AFF4',
   },
   characterWrapper: {
     position: 'absolute',
@@ -2133,6 +2286,31 @@ const styles = StyleSheet.create({
     top: 129.68, // 화면 기준 291.68에서 characterWrapper의 상대 위치 계산
     width: 42,
     height: 23,
+  },
+  sadCharacterWrapper: {
+    position: 'absolute',
+    top: 55, // Figma 기준: top: 373px - container top 318px = 55px
+    width: 393, // SVG viewBox width
+    height: 534, // SVG viewBox height
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  excitedEmotionCharacterContainer: {
+    position: 'absolute',
+    left: -21, // 더 왼쪽으로 이동 (슬픔 캐릭터 left: -1보다 20px 더 왼쪽)
+    top: 298, // 더 위로 이동 (기존 318에서 20px 위로)
+    width: 598,
+    height: 640, // 신남일 때 높이 (640 viewBox)
+    overflow: 'hidden',
+  },
+  excitedCharacterWrapper: {
+    position: 'absolute',
+    left: -188, // 더 왼쪽으로 이동
+    top: -10, // 더 위로 이동
+    width: 640, // SVG viewBox width
+    height: 640, // SVG viewBox height
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emotionCharacter: {
     width: 598,
@@ -2183,7 +2361,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#C4C4C4', // 프로필 스크린과 동일한 배경색
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
   },
   savedUserAvatarText: {
     color: '#FFFFFF',
@@ -2228,17 +2405,42 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 844, // 두 번째 화면 높이 (정확히 844px)
     position: 'relative',
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
     overflow: 'hidden', // 넘치는 내용 숨김
   },
   savedContentContainer: {
     paddingHorizontal: 24,
-    paddingTop: 54, // 사용자 정보 영역과의 간격
+    paddingTop: 30, // 사용자 정보 영역과의 간격 (내기록 화면과 동일)
   },
   savedContentTextContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
+  },
+  savedKeywordsContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginTop: 10,
+    gap: 8,
+  },
+  locationContainer: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationTag: {
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    marginRight: 8,
+  },
+  locationText: {
+    color: '#000000',
+    fontSize: 40,
+    fontWeight: '600',
+    letterSpacing: 1.6,
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
   },
   savedContentText: {
     color: '#FFFFFF',
@@ -2287,10 +2489,29 @@ const styles = StyleSheet.create({
   },
   savedHighlightMarker: {
     position: 'absolute',
-    top: -16.5, // 바 중앙에 위치
-    zIndex: 10,
-    width: 38.004,
-    height: 38.004,
+    top: (TOUCH_AREA_HEIGHT - MARKER_SIZE) / 2, // 터치 영역 중앙에 위치 (하이라이트 설정 화면과 동일)
+    width: MARKER_SIZE,
+    height: MARKER_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none', // 마커는 터치 안받음
+  },
+  savedTouchableArea: {
+    position: 'absolute',
+    bottom: 238 - (TOUCH_AREA_HEIGHT - TIMELINE_HEIGHT) / 2, // 터치 영역 중앙 정렬
+    left: '50%',
+    transform: [{ translateX: -TIMELINE_WIDTH / 2 }], // 중앙 정렬
+    width: TIMELINE_WIDTH,
+    height: TOUCH_AREA_HEIGHT, // 44px 터치 영역
+    justifyContent: 'center',
+    cursor: 'pointer',
+  },
+  savedWaveBar: {
+    width: TIMELINE_WIDTH,
+    height: TIMELINE_HEIGHT, // 5px
+    backgroundColor: '#B780FF',
+    position: 'absolute',
+    alignSelf: 'center',
   },
   savedWaveContainer: {
     position: 'absolute',

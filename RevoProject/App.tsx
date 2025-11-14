@@ -20,8 +20,10 @@ import OnBoardingScreen2 from './src/screens/onBoarding/OnBoardingScreen2';
 import RecordingScreen from './src/screens/recording/RecordingScreen';
 import RecordsScreen from './src/screens/records/RecordsScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
-import EmotionDetailScreen from './src/screens/emotionDetail/EmotionDetailScreen';
+import FeedScreen from './src/screens/feed/FeedScreen';
+import ArchiveScreen from './src/screens/archive/ArchiveScreen';
 import SettingsScreen from './src/screens/settings/SettingsScreen';
+import HighlightEditScreen from './src/screens/records/HighlightEditScreen';
 
 // Navigation Types
 import { RootStackParamList } from './src/types/navigation';
@@ -68,13 +70,21 @@ function AppNavigator() {
             <Stack.Screen name="Records" component={RecordsScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen 
-              name="EmotionDetail" 
-              component={EmotionDetailScreen}
+              name="Feed" 
+              component={FeedScreen}
               options={{
                 presentation: 'modal',
               }}
             />
+            <Stack.Screen name="Archive" component={ArchiveScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen 
+              name="HighlightEdit" 
+              component={HighlightEditScreen}
+              options={{
+                presentation: 'modal',
+              }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

@@ -1,0 +1,18 @@
+<svg width="337" height="138" viewBox="0 0 337 138" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="105.472" cy="69.472" r="60.4719" fill="#F5F5F5"/>
+<circle cx="231.556" cy="69.472" r="60.4719" fill="#F5F5F5"/>
+<mask id="mask0_396_110" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="45" y="9" width="121" height="121">
+<circle cx="105.472" cy="69.4719" r="60.4719" fill="#F5F5F5"/>
+</mask>
+<g mask="url(#mask0_396_110)">
+<circle cx="60.4755" cy="60.4755" r="60.4755" transform="matrix(-1 0 0 1 214.288 9)" fill="#0A0A0A"/>
+</g>
+<mask id="mask1_396_110" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="171" y="9" width="122" height="121">
+<circle cx="231.557" cy="69.4719" r="60.4719" fill="#F5F5F5"/>
+</mask>
+<g mask="url(#mask1_396_110)">
+<circle cx="60.4755" cy="60.4755" r="60.4755" transform="matrix(-1 0 0 1 344.289 9)" fill="#0A0A0A"/>
+</g>
+<path d="M81.0001 80.1475C81.0001 84.208 82.6132 88.1023 85.4844 90.9735C88.3556 93.8447 92.2498 95.4578 96.3104 95.4578C100.371 95.4578 104.265 93.8447 107.136 90.9735C110.008 88.1023 111.621 84.2081 111.621 80.1475L96.3104 80.1475H81.0001Z" fill="#F5F5F5"/>
+<path d="M211 80.1475C211 84.208 212.613 88.1023 215.484 90.9735C218.356 93.8447 222.25 95.4578 226.31 95.4578C230.371 95.4578 234.265 93.8447 237.136 90.9735C240.008 88.1023 241.621 84.2081 241.621 80.1475L226.31 80.1475H211Z" fill="#F5F5F5"/>
+</svg>

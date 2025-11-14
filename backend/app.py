@@ -153,6 +153,7 @@ def create_recording():
         user_id_str = request.form.get('user_id')
         highlight_time = request.form.get('highlight_time')
         frontend_transcript = request.form.get('transcript', '').strip()  # 프론트엔드에서 인식한 텍스트
+        district = request.form.get('district', '').strip()  # 위치 정보 (동/구)
         
         if not user_id_str:
             return jsonify({'error': '사용자 ID가 필요합니다.'}), 400
@@ -301,6 +302,7 @@ def create_recording():
             audio_file=unique_filename,
             emotion=emotion,
             highlight_time=highlight_time,
+            district=district if district else None,
             recorded_at=datetime.utcnow()
         )
         
@@ -338,15 +340,22 @@ def get_all_recordings():
     Query params:
     - user_id: 특정 사용자만 조회 (선택)
     - limit: 개수 제한 (기본 50)
+    - is_uploaded: 업로드된 기록만 조회 (선택, true/false)
     """
     try:
         user_id = request.args.get('user_id', type=int)
         limit = request.args.get('limit', default=50, type=int)
+        is_uploaded = request.args.get('is_uploaded', type=str)
         
         query = Recording.query
         
         if user_id:
             query = query.filter_by(user_id=user_id)
+        
+        # 업로드 여부 필터
+        if is_uploaded is not None:
+            is_uploaded_bool = is_uploaded.lower() == 'true'
+            query = query.filter_by(is_uploaded=is_uploaded_bool)
         
         recordings = query.order_by(Recording.recorded_at.desc()).limit(limit).all()
         
@@ -450,6 +459,14 @@ def update_recording(recording_id):
         # 하이라이트 시간 업데이트
         if 'highlight_time' in data:
             recording.highlight_time = data['highlight_time']
+        
+        # 업로드 여부 업데이트
+        if 'is_uploaded' in data:
+            recording.is_uploaded = data['is_uploaded']
+            # 업로드 여부가 True로 설정되면 업로드 날짜도 설정
+            if data['is_uploaded']:
+                recording.uploaded_at = datetime.utcnow()
+            # 업로드 여부가 False로 설정되면 업로드 날짜는 null로 유지 (기존 값 유지)
         
         recording.updated_at = datetime.utcnow()
         db.session.commit()

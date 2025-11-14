@@ -77,15 +77,13 @@ const SettingsScreen: FC = () => {
   const [showFriendManagement, setShowFriendManagement] = useState(false); // 친구 관리 화면 표시 여부
   const [friendManagementTitle, setFriendManagementTitle] = useState(''); // 친구 관리 화면 제목
   
-  // 온보딩 완료 상태 확인 및 마지막 방문 화면 업데이트
+  // 온보딩 완료 상태 확인
   useEffect(() => {
     if (!isOnboardingCompleted) {
       navigation.navigate('OnBoarding');
-    } else {
-      // 설정 화면 진입 시 마지막 방문 화면을 Settings로 설정
-      setLastVisitedScreen('Settings');
     }
-  }, [isOnboardingCompleted, navigation, setLastVisitedScreen]);
+    // 설정 화면은 마지막 방문 화면으로 저장하지 않음 (새로고침 시 설정 화면으로 가지 않도록)
+  }, [isOnboardingCompleted, navigation]);
   
   // 웹 환경에서 스와이프 핸들러
   const handleTouchStart = (e: any) => {
@@ -150,7 +148,7 @@ const SettingsScreen: FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
       
       {/* 배경 프레임 */}
       <View style={styles.frame} />
@@ -860,6 +858,8 @@ const SettingsScreen: FC = () => {
         onNavigateToRecords={() => navigation.navigate('Records')} 
         onNavigateToRecording={() => navigation.navigate('Recording')} 
         onNavigateToProfile={() => navigation.navigate('Profile')}
+        onNavigateToFeed={() => navigation.navigate('Feed')}
+        onNavigateToArchive={() => navigation.navigate('Archive')}
       />
     </SafeAreaView>
   );
@@ -869,7 +869,7 @@ const styles = StyleSheet.create({
   container: {
     width: screenWidth,
     height: screenHeight,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 390,
     height: 844,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
   },
   userInfoContainer: {
     position: 'absolute',
