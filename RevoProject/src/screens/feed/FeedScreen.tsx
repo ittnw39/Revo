@@ -734,10 +734,7 @@ const FeedScreen: FC = () => {
       </View>
 
         {/* 두 번째 화면: 상세 정보 화면 */}
-        <View 
-          style={styles.bottomScreen}
-          onTouchStart={handleTouchStart}
-        >
+        <View style={styles.bottomScreen}>
           {/* 바텀 스크린 헤더 */}
           <Header currentScreen="Feed" />
           
@@ -1125,9 +1122,9 @@ const styles = StyleSheet.create({
   surpriseCharacterWrapper: {
     position: 'absolute',
     top: 0,
-    left: -138,
-    width: 598,
-    height: 598,
+    left: -148,
+    width: 628,
+    height: 658,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -1394,9 +1394,9 @@ const styles = StyleSheet.create({
   surpriseCharacterWrapper: {
     position: 'absolute',
     top: 0,
-    left: -138,
-    width: 598,
-    height: 598,
+    left: -148,
+    width: 628,
+    height: 658,
     justifyContent: 'center',
     alignItems: 'center',
   },
