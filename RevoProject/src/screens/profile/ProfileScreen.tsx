@@ -135,12 +135,12 @@ const ProfileScreen: FC = () => {
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>12</Text>
+          <Text style={styles.statNumber}>0</Text>
           <Text style={styles.statLabel}>팔로워</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>12</Text>
+          <Text style={styles.statNumber}>0</Text>
           <Text style={styles.statLabel}>팔로잉</Text>
         </View>
       </View>

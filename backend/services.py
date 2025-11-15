@@ -62,12 +62,36 @@ def get_client():
                     import traceback
                     print(traceback.format_exc())
         
+        # API 키 검증 및 정리
+        if api_key:
+            # API 키 정리 (앞뒤 공백 제거)
+            api_key = api_key.strip()
+            
+            # 잘못된 형식 검증
+            if api_key.startswith('OPENAI_API_KEY') or api_key.startswith('OPENAI_A'):
+                print(f"⚠️ [GPT 분석] 잘못된 API 키 형식 감지: '{api_key[:50]}...'")
+                print(f"⚠️ [GPT 분석] .env 파일에 'OPENAI_API_KEY=OPENAI_API_KEY=...' 형식으로 저장되어 있을 수 있습니다.")
+                print(f"⚠️ [GPT 분석] .env 파일 형식: OPENAI_API_KEY=sk-... (키만 입력)")
+                api_key = None
+            elif not api_key.startswith('sk-'):
+                print(f"⚠️ [GPT 분석] API 키가 'sk-'로 시작하지 않습니다: '{api_key[:10]}...'")
+                print(f"⚠️ [GPT 분석] 올바른 OpenAI API 키는 'sk-'로 시작해야 합니다.")
+                api_key = None
+            elif len(api_key) < 40 or len(api_key) > 60:
+                print(f"⚠️ [GPT 분석] API 키 길이가 비정상입니다: {len(api_key)}자 (정상: 40-60자)")
+                print(f"⚠️ [GPT 분석] API 키 앞 10자: '{api_key[:10]}...'")
+                api_key = None
+        
         print(f"[GPT 분석] API 키 확인 중... (키 존재: {bool(api_key)}, 길이: {len(api_key) if api_key else 0})")
         if api_key:
-            _client = OpenAI(api_key=api_key)
-            print("[GPT 분석] OpenAI 클라이언트 생성 완료!")
+            try:
+                _client = OpenAI(api_key=api_key)
+                print("[GPT 분석] OpenAI 클라이언트 생성 완료!")
+            except Exception as e:
+                print(f"⚠️ [GPT 분석] OpenAI 클라이언트 생성 실패: {e}")
+                _client = None
         else:
-            print("[GPT 분석] OpenAI API 키가 없습니다!")
+            print("[GPT 분석] OpenAI API 키가 없거나 잘못되었습니다!")
             _client = None
     return _client
 
