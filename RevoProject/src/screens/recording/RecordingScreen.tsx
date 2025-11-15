@@ -1541,6 +1541,54 @@ const RecordingScreen: FC = () => {
                   </View>
                 </View>
               )}
+              
+              {/* 감정 캐릭터 (놀람) */}
+              {recordingData.emotion === '놀람' && (
+                <View style={styles.surpriseEmotionCharacterContainer}>
+                  {/* 놀람 캐릭터 SVG 전체 */}
+                  <View style={styles.surpriseCharacterWrapper}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="919" height="927" viewBox="0 0 919 927" fill="none" style={{ width: '100%', height: '100%' }}>
+                      <g clipPath="url(#clip0_1373_1361_surprise_recording)">
+                        <path d="M356.24 212.801C388.742 112.771 530.258 112.771 562.76 212.801C577.295 257.536 618.983 287.824 666.02 287.824C771.198 287.824 814.929 422.414 729.838 484.236C691.784 511.883 675.861 560.89 690.396 605.625C722.898 705.655 608.409 788.836 523.318 727.014C485.264 699.367 433.736 699.367 395.682 727.014C310.591 788.836 196.102 705.655 228.604 605.625C243.139 560.89 227.216 511.883 189.162 484.236C104.071 422.414 147.802 287.824 252.98 287.824C300.017 287.824 341.705 257.536 356.24 212.801Z" fill="#F99841"/>
+                        <mask id="path-2-inside-1_surprise_recording" fill="white">
+                          <path d="M459.853 419.084C455.762 403.817 460.271 389.344 469.923 386.758C479.576 384.171 490.717 394.451 494.807 409.718L494.808 409.719L459.853 419.085L459.853 419.084Z"/>
+                        </mask>
+                        <path d="M459.853 419.084C455.762 403.817 460.271 389.344 469.923 386.758C479.576 384.171 490.717 394.451 494.807 409.718L494.808 409.719L459.853 419.085L459.853 419.084Z" fill="#0A0A0A"/>
+                        <path d="M469.923 386.758L469.035 383.444L469.035 383.444L469.923 386.758ZM494.808 409.719L495.695 413.032L499.009 412.144L498.121 408.831L494.808 409.719ZM459.853 419.085L456.54 419.973L457.427 423.286L460.741 422.398L459.853 419.085ZM459.853 419.084L463.167 418.196C461.263 411.092 461.409 404.326 463.01 399.186C464.626 393.997 467.521 390.953 470.811 390.071L469.923 386.758L469.035 383.444C462.673 385.149 458.488 390.635 456.459 397.146C454.416 403.705 454.352 411.81 456.539 419.972L459.853 419.084ZM469.923 386.758L470.811 390.071C474.101 389.19 478.13 390.379 482.125 394.064C486.081 397.715 489.59 403.501 491.494 410.606L494.807 409.718L498.121 408.83C495.934 400.668 491.827 393.681 486.777 389.022C481.765 384.397 475.398 381.739 469.035 383.444L469.923 386.758ZM494.807 409.718L491.494 410.606L491.494 410.607L494.808 409.719L498.121 408.831L498.121 408.83L494.807 409.718ZM494.808 409.719L493.92 406.405L458.965 415.771L459.853 419.085L460.741 422.398L495.695 413.032L494.808 409.719ZM459.853 419.085L463.167 418.197L463.167 418.196L459.853 419.084L456.539 419.972L456.54 419.973L459.853 419.085Z" fill="black" mask="url(#path-2-inside-1_surprise_recording)"/>
+                        <circle cx="55.9859" cy="55.9859" r="55.9859" transform="matrix(-1 0 0 1 585.338 295.333)" fill="#F5F5F5"/>
+                        <circle cx="55.9859" cy="55.9859" r="55.9859" transform="matrix(-1 0 0 1 468.607 295.332)" fill="#F5F5F5"/>
+                        <mask id="mask0_1373_1361_surprise_recording" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="473" y="295" width="113" height="113">
+                          <circle cx="55.9859" cy="55.9859" r="55.9859" transform="matrix(-1 0 0 1 585.338 295.332)" fill="#F5F5F5"/>
+                        </mask>
+                        <g mask="url(#mask0_1373_1361_surprise_recording)">
+                          {eyeAnimationState === 0 ? (
+                            <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 632.03 295.332)" fill="#0A0A0A"/>
+                          ) : (
+                            <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 585.338 295.332)" fill="#0A0A0A"/>
+                          )}
+                        </g>
+                        <mask id="mask1_1373_1361_surprise_recording" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="356" y="295" width="113" height="113">
+                          <circle cx="55.9859" cy="55.9859" r="55.9859" transform="matrix(-1 0 0 1 468.607 295.332)" fill="#F5F5F5"/>
+                        </mask>
+                        <g mask="url(#mask1_1373_1361_surprise_recording)">
+                          {eyeAnimationState === 0 ? (
+                            <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 515.3 295.332)" fill="#0A0A0A"/>
+                          ) : (
+                            <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 468.607 295.332)" fill="#0A0A0A"/>
+                          )}
+                        </g>
+                        <path d="M508.63 361.202C508.63 364.961 510.123 368.566 512.781 371.225C515.439 373.883 519.045 375.376 522.804 375.376C526.563 375.376 530.169 373.883 532.827 371.225C535.485 368.566 536.979 364.961 536.979 361.202L522.804 361.202H508.63Z" fill="#F5F5F5"/>
+                        <path d="M391.898 361.202C391.898 364.961 393.392 368.566 396.05 371.225C398.708 373.883 402.313 375.376 406.073 375.376C409.832 375.376 413.437 373.883 416.095 371.225C418.754 368.566 420.247 364.961 420.247 361.202L406.073 361.202H391.898Z" fill="#F5F5F5"/>
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_1373_1361_surprise_recording">
+                          <rect width="919" height="927" fill="white"/>
+                        </clipPath>
+                      </defs>
+                    </svg>
+                  </View>
+                </View>
+              )}
             </View>
             
             {/* 두 번째 화면: 상세 정보 화면 */}
@@ -1681,7 +1729,7 @@ const RecordingScreen: FC = () => {
         <NavigationBar 
           onNavigateToRecords={() => navigation.navigate('Records')} 
           onNavigateToRecording={() => navigation.navigate('Recording')} 
-          onNavigateToProfile={() => navigation.navigate('Profile')}
+          onNavigateToProfile={() => navigation.navigate('Profile')} 
           onNavigateToFeed={() => navigation.navigate('Feed')}
           onNavigateToArchive={() => navigation.navigate('Archive')}
           currentPage="Recording" 
@@ -2309,6 +2357,23 @@ const styles = StyleSheet.create({
     top: -10, // 더 위로 이동
     width: 640, // SVG viewBox width
     height: 640, // SVG viewBox height
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  surpriseEmotionCharacterContainer: {
+    position: 'absolute',
+    left: -102,
+    top: 318,
+    width: 598,
+    height: 598,
+    overflow: 'hidden',
+  },
+  surpriseCharacterWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 919,
+    height: 927,
     justifyContent: 'center',
     alignItems: 'center',
   },
