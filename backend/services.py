@@ -77,8 +77,9 @@ def get_client():
                 print(f"⚠️ [GPT 분석] API 키가 'sk-'로 시작하지 않습니다: '{api_key[:10]}...'")
                 print(f"⚠️ [GPT 분석] 올바른 OpenAI API 키는 'sk-'로 시작해야 합니다.")
                 api_key = None
-            elif len(api_key) < 40 or len(api_key) > 60:
-                print(f"⚠️ [GPT 분석] API 키 길이가 비정상입니다: {len(api_key)}자 (정상: 40-60자)")
+            elif len(api_key) < 40 or len(api_key) > 200:
+                # 새로운 OpenAI API 키 형식(sk-proj-...)은 더 길 수 있음 (최대 200자)
+                print(f"⚠️ [GPT 분석] API 키 길이가 비정상입니다: {len(api_key)}자 (정상: 40-200자)")
                 print(f"⚠️ [GPT 분석] API 키 앞 10자: '{api_key[:10]}...'")
                 api_key = None
         

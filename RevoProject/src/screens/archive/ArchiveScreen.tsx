@@ -101,7 +101,7 @@ const ArchiveScreen: FC = () => {
     // 페이지별로 다른 데이터를 표시할 수 있도록 (현재는 동일)
     return {
       question: `${currentMonth}월에는 얼마나\n기록을 남겼을까요?`,
-      answer: `${totalMinutes}분 남겼어요`,
+      answer: `${totalMinutes}분\n남겼어요`,
     };
   }, [currentMonth, totalMinutes]);
 
@@ -207,7 +207,7 @@ const ArchiveScreen: FC = () => {
                   cx={7} 
                   cy={7} 
                   r={7} 
-                  fill={currentPageIndex === index ? "#2C2C2C" : "#CECECE"}
+                  fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
                 />
               );
             } else if (index === 2) {
@@ -219,7 +219,7 @@ const ArchiveScreen: FC = () => {
                   cy={7}
                   rx={7.5}
                   ry={7}
-                  fill={currentPageIndex === index ? "#2C2C2C" : "#CECECE"}
+                  fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
                 />
               );
             } else {
@@ -230,7 +230,7 @@ const ArchiveScreen: FC = () => {
                   cx={37} 
                   cy={7} 
                   r={7} 
-                  fill={currentPageIndex === index ? "#2C2C2C" : "#CECECE"}
+                  fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
                 />
               );
             }
@@ -308,7 +308,8 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   questionContainer: {
-    top: 60,
+    position: 'absolute',
+    top: 178, // 상단에서 178px
     left: 24,
   },
   questionText: {
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    zIndex: 1000, // 네비게이션 바와 같은 z-index로 고정
   },
 });
 

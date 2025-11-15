@@ -172,27 +172,20 @@ const RecordsScreen: FC = () => {
     });
   }, [selectedDateRecordings]);
 
-  // 오늘 날짜인 경우 최대 3개, 그 외에는 1개만
+  // 선택한 날짜의 기록 최대 3개까지
   const todayRecordings = useMemo(() => {
-    if (isSelectedDateToday) {
-      return sortedDateRecordings.slice(0, 3); // 최대 3개
-    }
-    return sortedDateRecordings.slice(0, 1); // 1개만
-  }, [isSelectedDateToday, sortedDateRecordings]);
+    return sortedDateRecordings.slice(0, 3); // 최대 3개
+  }, [sortedDateRecordings]);
 
   // 현재 페이지의 녹음 가져오기
   const currentRecording = useMemo(() => {
     if (todayRecordings.length === 0) return null;
-    if (isSelectedDateToday) {
-      // 오늘 날짜인 경우 페이지 인덱스에 해당하는 녹음
-      if (currentPageIndex >= 0 && currentPageIndex < todayRecordings.length) {
-        return todayRecordings[currentPageIndex];
-      }
-      return todayRecordings[0];
+    // 페이지 인덱스에 해당하는 녹음
+    if (currentPageIndex >= 0 && currentPageIndex < todayRecordings.length) {
+      return todayRecordings[currentPageIndex];
     }
-    // 오늘이 아닌 경우 첫 번째 녹음
     return todayRecordings[0];
-  }, [todayRecordings, currentPageIndex, isSelectedDateToday]);
+  }, [todayRecordings, currentPageIndex]);
 
   // currentRecording이 변경되면 selectedRecording 업데이트
   useEffect(() => {
@@ -642,8 +635,8 @@ const RecordsScreen: FC = () => {
 
   // 좌우 스와이프 제스처 처리 (설정화면 참고)
   const handleTouchStart = (e: any) => {
-    // 오늘 날짜이고 기록이 2개 이상일 때만 스와이프 가능
-    if (!isSelectedDateToday || todayRecordings.length <= 1) return;
+    // 기록이 2개 이상일 때만 스와이프 가능
+    if (todayRecordings.length <= 1) return;
 
     let startX: number;
     if (Platform.OS === 'web') {
@@ -996,8 +989,8 @@ const RecordsScreen: FC = () => {
       </ScrollView>
 
       {/* 하단 네비게이션 바 */}
-      {/* 페이지바 (오늘 날짜이고 기록이 2개 이상일 때만 표시, 네비게이션 바 상단 10px 간격) */}
-      {isSelectedDateToday && todayRecordings.length > 1 && (
+      {/* 페이지바 (기록이 2개 이상일 때만 표시, 네비게이션 바 상단 10px 간격) */}
+      {todayRecordings.length > 1 && (
         <View style={styles.pageIndicatorContainer}>
           <Svg width="75" height="14" viewBox="0 0 75 14" fill="none">
             {todayRecordings.map((_, index) => {
@@ -1009,7 +1002,7 @@ const RecordsScreen: FC = () => {
                     cx={7} 
                     cy={7} 
                     r={7} 
-                    fill={currentPageIndex === index ? "#2C2C2C" : "#CECECE"}
+                    fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
                   />
                 );
               } else if (index === todayRecordings.length - 1) {
@@ -1021,7 +1014,7 @@ const RecordsScreen: FC = () => {
                     cy={7}
                     rx={7.5}
                     ry={7}
-                    fill={currentPageIndex === index ? "#2C2C2C" : "#CECECE"}
+                    fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
                   />
                 );
               } else {
@@ -1032,7 +1025,7 @@ const RecordsScreen: FC = () => {
                     cx={37} 
                     cy={7} 
                     r={7} 
-                    fill={currentPageIndex === index ? "#2C2C2C" : "#CECECE"}
+                    fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
                   />
                 );
               }
