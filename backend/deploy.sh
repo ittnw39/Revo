@@ -16,7 +16,31 @@ echo ""
 echo "📂 현재 디렉토리: $(pwd)"
 echo ""
 
+# 0. 디스크 공간 확인 및 정리
+echo "0️⃣ 디스크 공간 확인 중..."
+DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+if [ "$DISK_USAGE" -gt 80 ]; then
+    echo "⚠️  디스크 사용량이 ${DISK_USAGE}%입니다. 정리 시작..."
+    
+    # Docker 정리
+    echo "   🗑️  Docker 정리 중..."
+    docker container prune -f 2>/dev/null || true
+    docker image prune -a -f 2>/dev/null || true
+    docker volume prune -f 2>/dev/null || true
+    docker builder prune -a -f 2>/dev/null || true
+    
+    # 시스템 캐시 정리
+    echo "   🗑️  시스템 캐시 정리 중..."
+    sudo apt-get clean 2>/dev/null || true
+    sudo apt-get autoclean 2>/dev/null || true
+    
+    echo "✅ 디스크 정리 완료"
+else
+    echo "✅ 디스크 사용량: ${DISK_USAGE}% (정상)"
+fi
+
 # 1. Git 강제 Pull (로컬 변경사항 무시)
+echo ""
 echo "1️⃣ Git 강제 Pull 실행 중..."
 git fetch origin main
 git reset --hard origin/main
@@ -38,6 +62,10 @@ echo "3️⃣ Docker 이미지 재빌드 중..."
 docker-compose build --no-cache
 if [ $? -ne 0 ]; then
     echo "❌ Docker 빌드 실패"
+    echo ""
+    echo "💡 디스크 공간 부족일 수 있습니다. 다음 명령어로 수동 정리:"
+    echo "   docker system prune -a -f"
+    echo "   sudo apt-get clean && sudo apt-get autoremove -y"
     exit 1
 fi
 echo "✅ Docker 빌드 완료"
