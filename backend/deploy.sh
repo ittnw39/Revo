@@ -12,6 +12,9 @@ echo "=========================================="
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
+# 스크립트 실행 권한 자동 부여
+chmod +x deploy.sh expand_disk.sh check_api_key.sh quick_deploy.sh 2>/dev/null || true
+
 echo ""
 echo "📂 현재 디렉토리: $(pwd)"
 echo ""
@@ -52,8 +55,10 @@ fi
 # 1. Git 강제 Pull (로컬 변경사항 무시)
 echo ""
 echo "1️⃣ Git 강제 Pull 실행 중..."
+# 로컬 변경사항 완전히 버리고 원격 저장소 상태로 강제 업데이트
 git fetch origin main
 git reset --hard origin/main
+git clean -fd  # 추적되지 않는 파일도 삭제
 if [ $? -ne 0 ]; then
     echo "❌ Git Pull 실패"
     exit 1

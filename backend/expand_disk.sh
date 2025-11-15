@@ -82,10 +82,21 @@ elif [[ "$ROOT_DEVICE" == /dev/xvda* ]] || [[ "$ROOT_DEVICE" == /dev/sda* ]]; th
     FS_DEVICE="${BASE_DEVICE}${PARTITION_NUM}"
 else
     # /dev/root인 경우 실제 장치 찾기
-    FS_DEVICE=$(lsblk -n -o NAME,MOUNTPOINT | grep '/$' | awk '{print $1}' | head -1)
+    FS_DEVICE=$(lsblk -n -o NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}' | head -1)
     if [[ ! "$FS_DEVICE" == /dev/* ]]; then
         FS_DEVICE="/dev/$FS_DEVICE"
     fi
+    # lsblk 출력에서 특수문자 제거
+    FS_DEVICE=$(echo "$FS_DEVICE" | sed 's/[├─└│]//g' | tr -d ' ')
+fi
+
+# 최종 확인: /dev/xvda1 형식으로 정리
+if [[ "$BASE_DEVICE" == /dev/xvda ]] && [[ "$PARTITION_NUM" == 1 ]]; then
+    FS_DEVICE="/dev/xvda1"
+elif [[ "$BASE_DEVICE" == /dev/nvme0n1 ]] && [[ "$PARTITION_NUM" == 1 ]]; then
+    FS_DEVICE="/dev/nvme0n1p1"
+elif [[ "$BASE_DEVICE" == /dev/sda ]] && [[ "$PARTITION_NUM" == 1 ]]; then
+    FS_DEVICE="/dev/sda1"
 fi
 
 echo "   파일 시스템 확장 중: $FS_DEVICE"
