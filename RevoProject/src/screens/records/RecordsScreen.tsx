@@ -1,4 +1,4 @@
-import { FC, useEffect, useState, useMemo, useRef } from 'react';
+import { FC, useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,13 +14,13 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import Svg, { Path, Circle, G, Mask, Ellipse } from 'react-native-svg';
+import Svg, { Path, Circle, G, Mask, Ellipse, Rect, Text as SvgText } from 'react-native-svg';
 
 import { useApp } from '../../contexts/AppContext';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 import DeleteConfirmModal from '../../components/DeleteConfirmModal';
-import { getRecordings, getUserFromStorage, Recording, getAudioUrl, deleteRecording, updateRecording } from '../../services/api';
+import { getRecordings, getUserFromStorage, Recording, getAudioUrl, deleteRecording, updateRecording, likeRecording, unlikeRecording } from '../../services/api';
 
 // 웹 환경에서 document 사용을 위한 타입 선언
 declare const document: {
@@ -49,8 +49,20 @@ const RecordsScreen: FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  // 현재 표시 중인 주의 시작일 (일요일)
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - currentDay);
+    sunday.setHours(0, 0, 0, 0);
+    return sunday;
+  });
+  const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
   // 눈 애니메이션 상태 (1초마다 변경)
   const [eyeAnimationState, setEyeAnimationState] = useState<number>(0);
+  // 슬픔 캐릭터 좌우 반전 애니메이션
+  const sadCharacterScaleX = useRef(new Animated.Value(1)).current;
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -59,14 +71,36 @@ const RecordsScreen: FC = () => {
     
     return () => clearInterval(interval);
   }, []);
-  const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
+
+  // 슬픔 캐릭터 좌우 반전 애니메이션
+  useEffect(() => {
+    if (selectedRecording && selectedRecording.emotion === '슬픔') {
+      Animated.timing(sadCharacterScaleX, {
+        toValue: eyeAnimationState === 0 ? 1 : -1,
+        duration: 200,
+        useNativeDriver: false, // 웹에서는 false로 설정 (경고 해결)
+      }).start();
+    }
+  }, [eyeAnimationState, selectedRecording?.id]); // selectedRecording 대신 id만 의존성으로
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [userName, setUserName] = useState<string>('');
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(0); // 오늘 날짜 기록 페이지 인덱스
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [likedRecordings, setLikedRecordings] = useState<Set<number>>(new Set()); // 좋아요한 기록 ID 집합
   const audioRef = useRef<any>(null); // HTMLAudioElement 또는 React Native Audio
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoadRef = useRef<boolean>(true); // 초기 로드 여부 추적
+  const isGestureDetectedRef = useRef<boolean>(false); // 제스처 감지 여부 추적
+  const isWeekBarSwipeDetectedRef = useRef<boolean>(false); // 위클리 바 제스처 감지 여부 추적
+  const weekBarSwipeRef = useRef<{
+    startX: number;
+    startY: number;
+    isDragging: boolean;
+    clickTimer?: ReturnType<typeof setTimeout>;
+  }>({ startX: 0, startY: 0, isDragging: false });
+  const weekContainerRef = useRef<any>(null); // weekContainer DOM 요소 참조
+  const currentWeekStartRef = useRef<Date>(currentWeekStart); // currentWeekStart의 최신 값을 추적
 
   // 감정별 색상 매핑
   const getEmotionColor = (emotion: string): string => {
@@ -83,20 +117,12 @@ const RecordsScreen: FC = () => {
 
   // 오늘 날짜 기준으로 이번주 날짜 계산 (일~토)
   const weekDays = useMemo<WeekDay[]>(() => {
-    const today = new Date();
-    const currentDay = today.getDay(); // 0(일요일) ~ 6(토요일)
-    
-    // 이번주 일요일 날짜 계산
-    const sunday = new Date(today);
-    sunday.setDate(today.getDate() - currentDay);
-    sunday.setHours(0, 0, 0, 0);
-    
     const days: WeekDay[] = [];
     const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
     
     for (let i = 0; i < 7; i++) {
-      const date = new Date(sunday);
-      date.setDate(sunday.getDate() + i);
+      const date = new Date(currentWeekStart);
+      date.setDate(currentWeekStart.getDate() + i);
       
       const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       
@@ -109,7 +135,7 @@ const RecordsScreen: FC = () => {
     }
     
     return days;
-  }, []);
+  }, [currentWeekStart]);
 
   // 과거 날짜인지 확인
   const isPastDate = (date: Date): boolean => {
@@ -127,6 +153,18 @@ const RecordsScreen: FC = () => {
     const checkDate = new Date(date);
     checkDate.setHours(0, 0, 0, 0);
     return checkDate > today;
+  };
+
+  // 해당 날짜가 현재 주에 속하는지 확인
+  const isInCurrentWeek = (date: Date): boolean => {
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    const weekStart = new Date(currentWeekStart);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    return checkDate >= weekStart && checkDate <= weekEnd;
   };
 
   // 오늘 날짜인지 확인
@@ -164,12 +202,12 @@ const RecordsScreen: FC = () => {
       return recDateString === dateString;
     });
     
-    // 디버깅용 로그
-    console.log('선택한 날짜:', dateString);
-    console.log('필터링된 녹음 개수:', filtered.length);
-    filtered.forEach((rec, idx) => {
-      console.log(`녹음 ${idx + 1}:`, rec.recorded_at, rec.id);
-    });
+    // 디버깅용 로그 제거 (무한 렌더링 방지)
+    // console.log('선택한 날짜:', dateString);
+    // console.log('필터링된 녹음 개수:', filtered.length);
+    // filtered.forEach((rec, idx) => {
+    //   console.log(`녹음 ${idx + 1}:`, rec.recorded_at, rec.id);
+    // });
     
     return filtered;
   }, [selectedDate, recordings]);
@@ -189,7 +227,8 @@ const RecordsScreen: FC = () => {
   // 선택한 날짜의 기록 최대 3개까지
   const todayRecordings = useMemo(() => {
     const result = sortedDateRecordings.slice(0, 3); // 최대 3개
-    console.log('todayRecordings 개수:', result.length, '/ 전체:', sortedDateRecordings.length);
+    // 디버깅용 로그 제거 (무한 렌더링 방지)
+    // console.log('todayRecordings 개수:', result.length, '/ 전체:', sortedDateRecordings.length);
     return result;
   }, [sortedDateRecordings]);
 
@@ -205,29 +244,38 @@ const RecordsScreen: FC = () => {
 
   // currentRecording이 변경되면 selectedRecording 업데이트
   useEffect(() => {
+    // ID 비교로 실제 변경 여부 확인 (무한 렌더링 방지)
     if (currentRecording) {
-      setSelectedRecording(currentRecording);
+      if (!selectedRecording || selectedRecording.id !== currentRecording.id) {
+        setSelectedRecording(currentRecording);
+      }
     } else {
-      setSelectedRecording(null);
+      if (selectedRecording !== null) {
+        setSelectedRecording(null);
+      }
     }
-  }, [currentRecording]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRecording?.id]); // ID만 의존성으로 사용하여 무한 루프 방지
+
+  // currentWeekStart가 변경될 때마다 ref 업데이트
+  useEffect(() => {
+    currentWeekStartRef.current = currentWeekStart;
+  }, [currentWeekStart]);
 
   // 선택한 날짜가 변경되면 페이지 인덱스 리셋
   useEffect(() => {
     setCurrentPageIndex(0);
   }, [selectedDate]);
 
-  // 초기 로드 시 최신 기록의 날짜로 selectedDate 설정 (한 번만 실행)
+  // 초기 로드 시 오늘 날짜로 selectedDate 설정 (한 번만 실행)
   useEffect(() => {
-    if (recordings.length > 0 && isInitialLoadRef.current) {
-      const sorted = [...recordings].sort((a, b) => {
-        return new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime();
-      });
-      const latest = sorted[0];
-      setSelectedDate(new Date(latest.recorded_at));
+    if (isInitialLoadRef.current) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setSelectedDate(today);
       isInitialLoadRef.current = false; // 초기 로드 완료 표시
     }
-  }, [recordings.length]); // recordings.length만 의존성으로 사용
+  }, []); // 빈 배열로 한 번만 실행
 
   // 해당 날짜에 기록이 있는지 확인
   const hasRecording = (dateString: string): boolean => {
@@ -240,16 +288,16 @@ const RecordsScreen: FC = () => {
     return hasRecord;
   };
 
-  // 렌더링 체크용 useEffect
-  useEffect(() => {
-    console.log('\n=== 렌더링 체크 ===');
-    console.log('selectedRecording:', selectedRecording);
-    console.log('selectedRecording?.emotion:', selectedRecording?.emotion);
-    console.log('조건 체크 (기쁨인가?):', selectedRecording && selectedRecording.emotion === '기쁨');
-    if (selectedRecording) {
-      console.log('전체 selectedRecording 객체:', JSON.stringify(selectedRecording, null, 2));
-    }
-  }, [selectedRecording]);
+  // 렌더링 체크용 useEffect 제거 (무한 렌더링 방지)
+  // useEffect(() => {
+  //   console.log('\n=== 렌더링 체크 ===');
+  //   console.log('selectedRecording:', selectedRecording);
+  //   console.log('selectedRecording?.emotion:', selectedRecording?.emotion);
+  //   console.log('조건 체크 (기쁨인가?):', selectedRecording && selectedRecording.emotion === '기쁨');
+  //   if (selectedRecording) {
+  //     console.log('전체 selectedRecording 객체:', JSON.stringify(selectedRecording, null, 2));
+  //   }
+  // }, [selectedRecording]);
 
   // 오디오 재생 함수
   const playAudio = (startTime?: number) => {
@@ -362,7 +410,8 @@ const RecordsScreen: FC = () => {
       return (
         <TouchableOpacity
           style={styles.sadEmotionCharacterContainer}
-          onLongPress={() => setShowDeleteModal(true)}
+          onPressIn={handleLongPressStart}
+          onPressOut={handleLongPressEnd}
           activeOpacity={1}
         >
           {/* 슬픔 색상 사각형 배경 */}
@@ -371,8 +420,11 @@ const RecordsScreen: FC = () => {
           <View style={styles.sadCharacterWrapper}>
             <svg xmlns="http://www.w3.org/2000/svg" width="393" height="534" viewBox="0 0 393 534" fill="none" style={{ width: '100%', height: '100%' }}>
               {/* 슬픔 캐릭터 SVG - 배경 rect는 제외하고 캐릭터만 (배경은 별도 렌더링) */}
+              {/* 원들 */}
               <circle cx="140.233" cy="108.908" r="53.9077" fill="#F5F5F5"/>
               <circle cx="252.631" cy="108.908" r="53.9077" fill="#F5F5F5"/>
+              {/* path를 원들 다음에 배치하여 원보다 높은 z-index */}
+              <path d="M100.777 133.678H124.919C133.755 133.678 140.919 140.842 140.919 149.678V321.6C140.919 330.437 133.755 337.6 124.919 337.6H116.777C107.94 337.6 100.777 330.437 100.777 321.6V133.678Z" fill="#F5F5F5"/>
               <mask id="mask0_sad_records" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="86" y="55" width="109" height="108">
                 <circle cx="140.232" cy="108.908" r="53.9077" fill="#F5F5F5"/>
               </mask>
@@ -393,11 +445,11 @@ const RecordsScreen: FC = () => {
                   <circle cx="60.4755" cy="60.4755" r="53.9108" transform="matrix(-1 0 0 1 365.659 48.4355)" fill="#0A0A0A"/>
                 )}
               </g>
-              <path d="M100.777 133.678H124.919C133.755 133.678 140.919 140.842 140.919 149.678V321.6C140.919 330.437 133.755 337.6 124.919 337.6H116.777C107.94 337.6 100.777 330.437 100.777 321.6V133.678Z" fill="#F5F5F5"/>
+              {/* rect를 검은 원들 다음에 배치하여 가장 높은 z-index */}
               <rect x="254.921" y="144.918" width="32.9243" height="95.7798" rx="16.4621" fill="#F5F5F5"/>
               <path d="M211.568 174.927C211.568 158.87 182.666 158.067 182.666 174.927" stroke="#0A0A0A" strokeWidth="8.02842" strokeLinecap="round"/>
-              <path d="M144.111 120.03C144.111 123.65 142.673 127.121 140.113 129.681C137.554 132.241 134.082 133.678 130.463 133.678C126.843 133.678 123.371 132.241 120.812 129.681C118.252 127.121 116.814 123.65 116.814 120.03L130.463 120.03H144.111Z" fill="#F5F5F5"/>
-              <path d="M254.922 120.03C254.922 123.65 253.484 127.121 250.924 129.681C248.365 132.24 244.893 133.678 241.273 133.678C237.654 133.678 234.182 132.24 231.622 129.681C229.063 127.121 227.625 123.65 227.625 120.03L241.273 120.03H254.922Z" fill="#F5F5F5"/>
+              <path d="M153.88 120.03C153.88 123.65 152.44 127.121 149.88 129.681C147.32 132.241 143.83 133.678 140.23 133.678C136.61 133.678 133.14 132.241 130.58 129.681C128.02 127.121 126.58 123.65 126.58 120.03L140.23 120.03H153.88Z" fill="#F5F5F5"/>
+              <path d="M266.28 120.03C266.28 123.65 264.84 127.121 262.28 129.681C259.72 132.24 256.25 133.678 252.63 133.678C249.01 133.678 245.54 132.24 242.98 129.681C240.42 127.121 238.98 123.65 238.98 120.03L252.63 120.03H266.28Z" fill="#F5F5F5"/>
             </svg>
           </View>
         </TouchableOpacity>
@@ -409,7 +461,8 @@ const RecordsScreen: FC = () => {
       return (
         <TouchableOpacity
           style={styles.excitedEmotionCharacterContainer}
-          onLongPress={() => setShowDeleteModal(true)}
+          onPressIn={handleLongPressStart}
+          onPressOut={handleLongPressEnd}
           activeOpacity={1}
         >
           {/* 신남 캐릭터 SVG (별 모양 배경 포함) */}
@@ -465,7 +518,8 @@ const RecordsScreen: FC = () => {
       return (
         <TouchableOpacity
           style={styles.surpriseEmotionCharacterContainer}
-          onLongPress={() => setShowDeleteModal(true)}
+          onPressIn={handleLongPressStart}
+          onPressOut={handleLongPressEnd}
           activeOpacity={1}
         >
           {/* 놀람 캐릭터 SVG 전체 */}
@@ -487,7 +541,7 @@ const RecordsScreen: FC = () => {
                   {eyeAnimationState === 0 ? (
                     <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 632.03 295.332)" fill="#0A0A0A"/>
                   ) : (
-                    <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 585.338 295.332)" fill="#0A0A0A"/>
+                    <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 538.646 295.332)" fill="#0A0A0A"/>
                   )}
                 </g>
                 <mask id="mask1_1373_1361_surprise_records" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="356" y="295" width="113" height="113">
@@ -497,11 +551,11 @@ const RecordsScreen: FC = () => {
                   {eyeAnimationState === 0 ? (
                     <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 515.3 295.332)" fill="#0A0A0A"/>
                   ) : (
-                    <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 468.607 295.332)" fill="#0A0A0A"/>
+                    <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 421.914 295.332)" fill="#0A0A0A"/>
                   )}
                 </g>
-                <path d="M508.63 361.202C508.63 364.961 510.123 368.566 512.781 371.225C515.439 373.883 519.045 375.376 522.804 375.376C526.563 375.376 530.169 373.883 532.827 371.225C535.485 368.566 536.979 364.961 536.979 361.202L522.804 361.202H508.63Z" fill="#F5F5F5"/>
-                <path d="M391.898 361.202C391.898 364.961 393.392 368.566 396.05 371.225C398.708 373.883 402.313 375.376 406.073 375.376C409.832 375.376 413.437 373.883 416.095 371.225C418.754 368.566 420.247 364.961 420.247 361.202L406.073 361.202H391.898Z" fill="#F5F5F5"/>
+                <path d="M515.629 361.202C515.629 364.961 517.123 368.566 519.781 371.225C522.439 373.883 526.045 375.376 529.804 375.376C533.563 375.376 537.169 373.883 539.827 371.225C542.485 368.566 543.978 364.961 543.978 361.202L529.804 361.202H515.629Z" fill="#F5F5F5"/>
+                <path d="M425.247 361.202C425.247 364.961 423.753 368.566 421.095 371.225C418.437 373.883 414.832 375.376 411.072 375.376C407.313 375.376 403.708 373.883 401.050 371.225C398.392 368.566 396.898 364.961 396.898 361.202L411.072 361.202H425.247Z" fill="#F5F5F5"/>
               </g>
               <defs>
                 <clipPath id="clip0_1373_1361_surprise_records">
@@ -514,11 +568,44 @@ const RecordsScreen: FC = () => {
       );
     }
 
+    // 화남 캐릭터
+    if (emotion === '화남') {
+      return (
+        <TouchableOpacity
+          style={styles.angryEmotionCharacterContainer}
+          onPressIn={handleLongPressStart}
+          onPressOut={handleLongPressEnd}
+          activeOpacity={1}
+        >
+          <View style={styles.angryCharacterWrapper}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="791" height="557" viewBox="0 0 791 557" fill="none">
+              <path d="M419.629 535.046C412.208 545.738 396.689 546.544 388.2 536.679L24.6902 114.256C14.2364 102.108 21.6991 83.2169 37.633 81.4933L747.652 4.68908C764.609 2.85486 775.864 21.8074 766.139 35.8185L419.629 535.046Z" fill={emotionColor}/>
+              <path d="M412.686 268.128C412.686 248.933 378.136 247.973 378.136 268.128" stroke="#0A0A0A" strokeWidth="9.59736" strokeLinecap="round"/>
+              <g clipPath="url(#clip0_1373_1507_angry_records)">
+                <path d="M396.885 188.442C396.885 196.905 395.218 205.285 391.98 213.104C388.741 220.922 383.994 228.026 378.01 234.01C372.026 239.994 364.922 244.741 357.104 247.98C349.285 251.218 340.905 252.885 332.442 252.885C323.98 252.885 315.6 251.218 307.781 247.98C299.963 244.741 292.859 239.994 286.875 234.01C280.891 228.026 276.144 220.922 272.905 213.104C269.667 205.285 268 196.905 268 188.442L332.442 188.442H396.885Z" fill="#F5F5F5"/>
+                <path d="M525.488 188.442C525.488 196.905 523.822 205.285 520.583 213.104C517.345 220.922 512.598 228.026 506.614 234.01C500.63 239.994 493.526 244.741 485.707 247.98C477.889 251.218 469.509 252.885 461.046 252.885C452.583 252.885 444.203 251.218 436.385 247.98C428.566 244.741 421.462 239.994 415.478 234.01C409.494 228.026 404.747 220.922 401.509 213.104C398.27 205.285 396.604 196.905 396.604 188.442L461.046 188.442H525.488Z" fill="#F5F5F5"/>
+                <path d="M372.622 189.025C372.622 194.318 371.579 199.56 369.553 204.45C367.528 209.341 364.559 213.784 360.815 217.527C357.072 221.27 352.629 224.24 347.738 226.265C342.848 228.291 337.606 229.334 332.313 229.334C327.019 229.334 321.778 228.291 316.887 226.265C311.997 224.24 307.553 221.27 303.81 217.527C300.067 213.784 297.098 209.341 295.072 204.45C293.047 199.56 292.004 194.318 292.004 189.025L332.313 189.025H372.622Z" fill="#0A0A0A"/>
+                <path d="M500.945 189.025C500.945 194.318 499.903 199.56 497.877 204.45C495.851 209.341 492.882 213.784 489.139 217.527C485.396 221.27 480.953 224.24 476.062 226.265C471.172 228.291 465.93 229.334 460.637 229.334C455.343 229.334 450.101 228.291 445.211 226.265C440.32 224.24 435.877 221.27 432.134 217.527C428.391 213.784 425.422 209.341 423.396 204.45C421.37 199.56 420.328 194.318 420.328 189.025L460.637 189.025H500.945Z" fill="#0A0A0A"/>
+                <path d="M308.308 203.658C308.308 207.985 306.589 212.135 303.53 215.195C300.47 218.254 296.32 219.973 291.993 219.973C287.666 219.973 283.516 218.254 280.456 215.195C277.396 212.135 275.677 207.985 275.677 203.658L291.993 203.658H308.308Z" fill="#F5F5F5"/>
+                <path d="M442.671 203.658C442.671 207.985 440.952 212.135 437.892 215.195C434.833 218.254 430.683 219.973 426.356 219.973C422.028 219.973 417.878 218.254 414.819 215.195C411.759 212.135 410.04 207.985 410.04 203.658L426.356 203.658H442.671Z" fill="#F5F5F5"/>
+              </g>
+              <defs>
+                <clipPath id="clip0_1373_1507_angry_records">
+                  <rect width="279" height="92" fill="white" transform="translate(256 169)"/>
+                </clipPath>
+              </defs>
+            </svg>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
     // 행복 캐릭터 및 기본 캐릭터 (원형 배경)
     return (
       <TouchableOpacity
         style={styles.emotionCharacterContainer}
-        onLongPress={() => setShowDeleteModal(true)}
+        onPressIn={handleLongPressStart}
+        onPressOut={handleLongPressEnd}
         activeOpacity={1}
       >
         <View style={[styles.characterCircleBackground, { backgroundColor: emotionColor }]} />
@@ -697,6 +784,7 @@ const RecordsScreen: FC = () => {
         const userInfo = getUserFromStorage();
         if (userInfo) {
           setUserName(userInfo.name);
+          setCurrentUserId(userInfo.id);
           // 모든 녹음 가져오기 (날짜별 필터링을 위해)
           const response = await getRecordings({ 
             userId: userInfo.id,
@@ -737,6 +825,15 @@ const RecordsScreen: FC = () => {
     // 기록이 2개 이상일 때만 스와이프 가능
     if (todayRecordings.length <= 1) return;
 
+    // 제스처 감지 플래그 초기화
+    isGestureDetectedRef.current = false;
+    
+    // long press 타이머 취소
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
     let startX: number;
     if (Platform.OS === 'web') {
       // 웹 환경
@@ -765,6 +862,15 @@ const RecordsScreen: FC = () => {
       const deltaX = currentX - startX;
       
       if (Math.abs(deltaX) > 50) {
+        // 제스처 감지됨
+        isGestureDetectedRef.current = true;
+        
+        // long press 타이머 취소
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+        
         if (deltaX > 0 && currentPageIndex > 0) {
           // 오른쪽으로 스와이프 - 이전 페이지
           setCurrentPageIndex(currentPageIndex - 1);
@@ -782,6 +888,11 @@ const RecordsScreen: FC = () => {
     };
     
     const handleTouchEnd = () => {
+      // 제스처 플래그 리셋 (약간의 지연 후)
+      setTimeout(() => {
+        isGestureDetectedRef.current = false;
+      }, 100);
+      
       if (Platform.OS === 'web' && typeof document !== 'undefined') {
         (document as any).removeEventListener('touchmove', handleTouchMove);
         (document as any).removeEventListener('touchend', handleTouchEnd);
@@ -793,6 +904,193 @@ const RecordsScreen: FC = () => {
       (document as any).addEventListener('touchend', handleTouchEnd);
     }
   };
+
+  // 커스텀 long press 핸들러 (제스처가 감지되지 않았을 때만 작동)
+  const handleLongPressStart = () => {
+    // 제스처가 감지되지 않았을 때만 타이머 시작
+    if (!isGestureDetectedRef.current) {
+      longPressTimerRef.current = setTimeout(() => {
+        if (!isGestureDetectedRef.current) {
+          setShowDeleteModal(true);
+        }
+      }, 1000); // 1초 후 삭제 모달 표시
+    }
+  };
+
+  const handleLongPressEnd = () => {
+    // 타이머 취소
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // 위클리 바 제스처 핸들러 (통합 버전)
+  const handleWeekBarGestureStart = useCallback((e: any) => {
+    console.log('=== 제스처 시작 ===', e.type);
+    
+    let x: number, y: number;
+    
+    if (Platform.OS === 'web') {
+      // 웹: 마우스 또는 터치
+      if (e.type === 'mousedown') {
+        x = e.clientX;
+        y = e.clientY;
+      } else {
+        const touch = e.touches?.[0] || e.nativeEvent?.touches?.[0];
+        if (!touch) {
+          console.log('터치 이벤트 없음');
+          return;
+        }
+        x = touch.clientX || touch.pageX;
+        y = touch.clientY || touch.pageY;
+      }
+    } else {
+      const touch = e.nativeEvent.touches[0];
+      if (!touch) return;
+      x = touch.pageX;
+      y = touch.pageY;
+    }
+    
+    console.log('시작 위치:', { x, y });
+    weekBarSwipeRef.current.startX = x;
+    weekBarSwipeRef.current.startY = y;
+    weekBarSwipeRef.current.isDragging = false;
+    isWeekBarSwipeDetectedRef.current = false;
+    
+    // 제스처 시작 시점에 타이머 설정 (짧은 시간 내에 이동이 없으면 클릭으로 간주)
+    weekBarSwipeRef.current.clickTimer = setTimeout(() => {
+      // 100ms 내에 이동이 없으면 클릭 가능 상태로 유지
+      if (!weekBarSwipeRef.current.isDragging) {
+        // 클릭 가능 상태
+      }
+    }, 100);
+  }, []);
+
+  const handleWeekBarGestureMove = useCallback((e: any) => {
+    if (!weekBarSwipeRef.current.startX) return;
+    
+    let currentX: number, currentY: number;
+    
+    if (Platform.OS === 'web') {
+      if (e.type === 'mousemove') {
+        currentX = e.clientX;
+        currentY = e.clientY;
+      } else {
+        const touch = e.touches?.[0] || e.nativeEvent?.touches?.[0];
+        if (!touch) return;
+        currentX = touch.clientX || touch.pageX;
+        currentY = touch.clientY || touch.pageY;
+      }
+    } else {
+      const touch = e.nativeEvent.touches[0];
+      if (!touch) return;
+      currentX = touch.pageX;
+      currentY = touch.pageY;
+    }
+    
+    const deltaX = currentX - weekBarSwipeRef.current.startX;
+    const deltaY = Math.abs(currentY - weekBarSwipeRef.current.startY);
+    
+    // 수평 이동이 수직 이동보다 크고, 50px 이상 이동했을 때만 제스처로 인식
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > deltaY && !weekBarSwipeRef.current.isDragging) {
+      console.log('=== 제스처 감지됨! ===', { deltaX, deltaY });
+      weekBarSwipeRef.current.isDragging = true;
+      isWeekBarSwipeDetectedRef.current = true;
+      
+      // 제스처가 감지되면 클릭 타이머 취소
+      if (weekBarSwipeRef.current.clickTimer) {
+        clearTimeout(weekBarSwipeRef.current.clickTimer);
+        weekBarSwipeRef.current.clickTimer = undefined;
+      }
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const currentDay = today.getDay();
+      const thisWeekSunday = new Date(today);
+      thisWeekSunday.setDate(today.getDate() - currentDay);
+      thisWeekSunday.setHours(0, 0, 0, 0);
+      
+      const currentWeek = currentWeekStartRef.current;
+      const isCurrentWeek = currentWeek.getTime() === thisWeekSunday.getTime();
+      
+      if (deltaX > 0) {
+        console.log('>>> 이전 주로 이동');
+        const prevWeek = new Date(currentWeek);
+        prevWeek.setDate(currentWeek.getDate() - 7);
+        prevWeek.setHours(0, 0, 0, 0);
+        setCurrentWeekStart(prevWeek);
+      } else if (deltaX < 0 && !isCurrentWeek) {
+        console.log('>>> 다음 주로 이동');
+        const nextWeek = new Date(currentWeek);
+        nextWeek.setDate(currentWeek.getDate() + 7);
+        nextWeek.setHours(0, 0, 0, 0);
+        setCurrentWeekStart(nextWeek);
+      }
+      
+      // 리셋
+      weekBarSwipeRef.current.startX = 0;
+      weekBarSwipeRef.current.startY = 0;
+      weekBarSwipeRef.current.isDragging = false;
+    }
+  }, []);
+
+  const handleWeekBarGestureEnd = useCallback(() => {
+    console.log('=== 제스처 종료 ===');
+    
+    // 클릭 타이머 정리
+    if (weekBarSwipeRef.current.clickTimer) {
+      clearTimeout(weekBarSwipeRef.current.clickTimer);
+      weekBarSwipeRef.current.clickTimer = undefined;
+    }
+    
+    // 제스처가 실제로 감지되었을 때만 플래그 유지, 아니면 즉시 리셋
+    if (!weekBarSwipeRef.current.isDragging) {
+      // 제스처가 감지되지 않았으면 즉시 리셋 (클릭 가능)
+      weekBarSwipeRef.current.startX = 0;
+      weekBarSwipeRef.current.startY = 0;
+      isWeekBarSwipeDetectedRef.current = false;
+    } else {
+      // 제스처가 감지되었으면 짧은 지연 후 리셋
+      setTimeout(() => {
+        weekBarSwipeRef.current.startX = 0;
+        weekBarSwipeRef.current.startY = 0;
+        weekBarSwipeRef.current.isDragging = false;
+        isWeekBarSwipeDetectedRef.current = false;
+      }, 50);
+    }
+  }, []);
+
+  // 웹 환경에서 document에 이벤트 리스너 추가
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const handleMove = (e: any) => {
+        if (weekBarSwipeRef.current.startX) {
+          handleWeekBarGestureMove(e);
+        }
+      };
+      
+      const handleEnd = () => {
+        if (weekBarSwipeRef.current.startX) {
+          handleWeekBarGestureEnd();
+        }
+      };
+      
+      // 마우스와 터치 모두 처리
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleEnd);
+      document.addEventListener('touchmove', handleMove);
+      document.addEventListener('touchend', handleEnd);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMove);
+        document.removeEventListener('mouseup', handleEnd);
+        document.removeEventListener('touchmove', handleMove);
+        document.removeEventListener('touchend', handleEnd);
+      };
+    }
+  }, [handleWeekBarGestureMove, handleWeekBarGestureEnd]);
+
   
   return (
     <SafeAreaView style={styles.container}>
@@ -822,33 +1120,58 @@ const RecordsScreen: FC = () => {
               onTouchStart={handleTouchStart}
             >
               {/* 이번주 날짜 표시 - topScreen 안에 배치 */}
-              <View style={[styles.weekContainer, { pointerEvents: 'box-none' }]}>
+              <View 
+                style={styles.weekContainer}
+                pointerEvents="box-none"
+                onStartShouldSetResponder={() => true}
+                onMoveShouldSetResponder={() => true}
+                onResponderGrant={handleWeekBarGestureStart}
+                onResponderMove={handleWeekBarGestureMove}
+                onResponderRelease={handleWeekBarGestureEnd}
+                {...(Platform.OS === 'web' ? {
+                  onMouseDown: handleWeekBarGestureStart,
+                  onTouchStart: handleWeekBarGestureStart,
+                } : {})}
+              >
         {weekDays.map((day, index) => {
           const today = isToday(day.date);
           const selected = isSelected(day.date);
           const hasRecord = hasRecording(day.dateString);
                   const isPastDate = !isFutureDate(day.date) && !today; // 지나간 날짜 (오늘이 아닌 과거 날짜)
           
-          // 디버깅용 로그 (개발 중에만 사용)
-          if (hasRecord) {
-            console.log(`날짜 ${day.dateString}에 녹음이 있습니다.`);
-          }
+          // 디버깅용 로그 제거 (무한 렌더링 방지)
+          // if (hasRecord) {
+          //   console.log(`날짜 ${day.dateString}에 녹음이 있습니다.`);
+          // }
           
           return (
-            <TouchableOpacity
+            <View
               key={index}
               style={styles.dayItem}
-              onPress={() => {
+              onTouchEnd={(e: any) => {
+                // 제스처가 감지되지 않았으면 즉시 날짜 선택
                 // 미래 날짜는 선택 불가
-                if (!isFutureDate(day.date)) {
-                          console.log('날짜 선택:', day.date, day.dateString);
-                          const newDate = new Date(day.date);
-                          newDate.setHours(0, 0, 0, 0);
-                          setSelectedDate(newDate); // 새로운 Date 객체로 설정
+                // 제스처 감지 여부를 즉시 확인 (isDragging이 false이고 제스처 플래그가 false면 클릭으로 간주)
+                if (!weekBarSwipeRef.current.isDragging && !isWeekBarSwipeDetectedRef.current && !isFutureDate(day.date)) {
+                  console.log('날짜 선택:', day.date, day.dateString);
+                  const newDate = new Date(day.date);
+                  newDate.setHours(0, 0, 0, 0);
+                  setSelectedDate(newDate);
                 }
               }}
-              activeOpacity={isFutureDate(day.date) ? 1 : 0.7}
-              disabled={isFutureDate(day.date)}
+              {...(Platform.OS === 'web' ? {
+                onMouseUp: (e: any) => {
+                  // 제스처가 감지되지 않았으면 즉시 날짜 선택
+                  // 미래 날짜는 선택 불가
+                  // 제스처 감지 여부를 즉시 확인 (isDragging이 false이고 제스처 플래그가 false면 클릭으로 간주)
+                  if (!weekBarSwipeRef.current.isDragging && !isWeekBarSwipeDetectedRef.current && !isFutureDate(day.date)) {
+                    console.log('날짜 선택:', day.date, day.dateString);
+                    const newDate = new Date(day.date);
+                    newDate.setHours(0, 0, 0, 0);
+                    setSelectedDate(newDate);
+                  }
+                },
+              } : {})}
             >
               {/* 오늘 날짜 위에 점 표시 */}
               {today && (
@@ -873,7 +1196,7 @@ const RecordsScreen: FC = () => {
                   {day.dayNumber}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </View>
           );
         })}
       </View>
@@ -936,6 +1259,21 @@ const RecordsScreen: FC = () => {
                   <Text style={styles.normalText}>에서</Text>
                 </View>
               )}
+              {/* 좋아요 아이콘과 수 표시 - locationContainer 밖에, 키워드와 동일한 여백 */}
+              {selectedRecording.district && (
+                <View style={[styles.likeContainer, { backgroundColor: getEmotionColor(selectedRecording.emotion) }]}>
+                  <Svg width="38" height="29" viewBox="0 0 38 29" fill="none">
+                    <Path 
+                      d="M37.5396 12.3597C37.4864 15.1714 34.6336 15.2098 34.5924 15.2102L23.0205 15.0058C23.0309 15.0725 24.128 22.171 20.5511 25.7091C19.012 27.2312 15.1695 27.8461 11.2786 28.0514C5.24305 28.3697 0.476329 23.427 0.0332704 17.3819C-0.330988 12.4115 2.31851 7.70503 6.75148 5.44745L8.51303 4.55044C8.52372 4.54467 15.5805 0.734579 18.5292 0.0985724C19.7877 -0.172823 20.5207 0.154068 20.9475 0.617854C21.6605 1.39279 21.1543 2.55306 20.4572 3.34408L16.0274 8.37048L34.7008 9.40628C34.7064 9.40652 37.5932 9.53037 37.5396 12.3597Z" 
+                      fill="#0A0A0A"
+                    />
+                  </Svg>
+                  <View style={styles.likeTextContainer}>
+                    <Text style={styles.likeCount}>{selectedRecording.likes || 0}</Text>
+                    <Text style={styles.likePlus}>+</Text>
+                  </View>
+                </View>
+              )}
             </View>
 
 
@@ -993,27 +1331,52 @@ const RecordsScreen: FC = () => {
             {/* 첫 번째 화면: 캐릭터 화면 */}
             <View style={styles.topScreen}>
               {/* 이번주 날짜 표시 - topScreen 안에 배치 */}
-              <View style={[styles.weekContainer, { pointerEvents: 'box-none' }]}>
+              <View 
+                style={styles.weekContainer}
+                pointerEvents="box-none"
+                onStartShouldSetResponder={() => true}
+                onMoveShouldSetResponder={() => true}
+                onResponderGrant={handleWeekBarGestureStart}
+                onResponderMove={handleWeekBarGestureMove}
+                onResponderRelease={handleWeekBarGestureEnd}
+                {...(Platform.OS === 'web' ? {
+                  onMouseDown: handleWeekBarGestureStart,
+                  onTouchStart: handleWeekBarGestureStart,
+                } : {})}
+              >
                 {weekDays.map((day, index) => {
                   const today = isToday(day.date);
                   const selected = isSelected(day.date);
                   const hasRecord = hasRecording(day.dateString);
                   
                   return (
-                    <TouchableOpacity
+                    <View
                       key={index}
                       style={styles.dayItem}
-                      onPress={() => {
-                        // 미래 날짜는 선택 불가
-                        if (!isFutureDate(day.date)) {
-                          console.log('날짜 선택:', day.date, day.dateString);
-                          const newDate = new Date(day.date);
-                          newDate.setHours(0, 0, 0, 0);
-                          setSelectedDate(newDate);
-                        }
+                      onTouchEnd={(e: any) => {
+                        // 제스처가 감지되지 않았으면 날짜 선택
+                        setTimeout(() => {
+                          if (!isWeekBarSwipeDetectedRef.current && !isFutureDate(day.date)) {
+                            console.log('날짜 선택:', day.date, day.dateString);
+                            const newDate = new Date(day.date);
+                            newDate.setHours(0, 0, 0, 0);
+                            setSelectedDate(newDate);
+                          }
+                        }, 150);
                       }}
-                      activeOpacity={isFutureDate(day.date) ? 1 : 0.7}
-                      disabled={isFutureDate(day.date)}
+                      {...(Platform.OS === 'web' ? {
+                        onMouseUp: (e: any) => {
+                          // 제스처가 감지되지 않았으면 날짜 선택
+                          setTimeout(() => {
+                            if (!isWeekBarSwipeDetectedRef.current && !isFutureDate(day.date)) {
+                              console.log('날짜 선택:', day.date, day.dateString);
+                              const newDate = new Date(day.date);
+                              newDate.setHours(0, 0, 0, 0);
+                              setSelectedDate(newDate);
+                            }
+                          }, 150);
+                        },
+                      } : {})}
                     >
                       {/* 오늘 날짜 위에 점 표시 */}
                       {today && (
@@ -1038,7 +1401,7 @@ const RecordsScreen: FC = () => {
                           {day.dayNumber}
                         </Text>
               </View>
-                    </TouchableOpacity>
+                    </View>
                   );
                 })}
             </View>
@@ -1335,7 +1698,6 @@ const styles = StyleSheet.create({
   characterEyesContainer: {
     width: 337,
     height: 138,
-    paddingTop: 9,
     paddingRight: 44.971,
     paddingBottom: 8.056,
     paddingLeft: 45,
@@ -1393,7 +1755,7 @@ const styles = StyleSheet.create({
   surpriseEmotionCharacterContainer: {
     position: 'absolute',
     left: -102,
-    top: 280, // 놀람 캐릭터만 top: 280 적용
+    top: 298, // 놀람 캐릭터만 top: 280 적용
     width: 598,
     height: 598,
     overflow: 'hidden',
@@ -1401,9 +1763,26 @@ const styles = StyleSheet.create({
   surpriseCharacterWrapper: {
     position: 'absolute',
     top: 0,
-    left: -148,
+    left: -138,
     width: 628,
     height: 658,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  angryEmotionCharacterContainer: {
+    position: 'absolute',
+    left: -199,
+    top: 332,
+    width: 791,
+    height: 557,
+    overflow: 'hidden',
+  },
+  angryCharacterWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 791,
+    height: 557,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1497,6 +1876,36 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginTop: 10,
     gap: 8,
+  },
+  likeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10, // 키워드와 동일한 여백
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    gap: 8,
+    alignSelf: 'flex-start',
+  },
+  likeTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  likeCount: {
+    color: '#000000',
+    fontSize: 40,
+    fontWeight: '600',
+    letterSpacing: 1.6,
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  likePlus: {
+    color: '#000000',
+    fontSize: 40,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+    marginLeft: 0,
+    ...(Platform.OS === 'web' ? { bottom: 3.5 } : { marginTop: -3.5 }),
   },
   locationContainer: {
     marginTop: 8,

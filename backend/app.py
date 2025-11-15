@@ -7,12 +7,12 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from werkzeug.utils import secure_filename
 import whisper
 from dotenv import load_dotenv
 
-from models import db, User, Recording, EmotionType
+from models import db, User, Recording, EmotionType, get_kst_now
 from services import analyze_text_with_gpt, extract_keywords_simple
 
 # 환경변수 로드
@@ -63,7 +63,7 @@ def health_check():
     return jsonify({
         'status': 'ok',
         'message': '서버가 정상적으로 실행 중입니다.',
-        'timestamp': datetime.now().isoformat()
+        'timestamp': get_kst_now().isoformat()
     })
 
 # ==================== 사용자 API ====================
@@ -110,7 +110,7 @@ def create_user():
 def get_user(user_id):
     """특정 사용자 조회"""
     try:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return jsonify({'error': '사용자를 찾을 수 없습니다.'}), 404
         
@@ -165,7 +165,7 @@ def create_recording():
             return jsonify({'error': '사용자 ID가 올바르지 않습니다.'}), 400
         
         # 사용자 확인
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return jsonify({'error': '사용자를 찾을 수 없습니다.'}), 404
         
@@ -303,7 +303,7 @@ def create_recording():
             emotion=emotion,
             highlight_time=highlight_time,
             district=district if district else None,
-            recorded_at=datetime.utcnow()
+            recorded_at=get_kst_now()
         )
         
         db.session.add(recording)
@@ -371,7 +371,7 @@ def get_all_recordings():
 def get_recording(recording_id):
     """특정 녹음 조회"""
     try:
-        recording = Recording.query.get(recording_id)
+        recording = db.session.get(Recording, recording_id)
         if not recording:
             return jsonify({'error': '녹음을 찾을 수 없습니다.'}), 404
         
@@ -386,7 +386,7 @@ def get_recording(recording_id):
 def delete_recording(recording_id):
     """녹음 삭제"""
     try:
-        recording = Recording.query.get(recording_id)
+        recording = db.session.get(Recording, recording_id)
         if not recording:
             return jsonify({'error': '녹음을 찾을 수 없습니다.'}), 404
         
@@ -411,7 +411,7 @@ def delete_recording(recording_id):
 def like_recording(recording_id):
     """좋아요 추가"""
     try:
-        recording = Recording.query.get(recording_id)
+        recording = db.session.get(Recording, recording_id)
         if not recording:
             return jsonify({'error': '녹음을 찾을 수 없습니다.'}), 404
         
@@ -430,7 +430,7 @@ def like_recording(recording_id):
 def unlike_recording(recording_id):
     """좋아요 취소"""
     try:
-        recording = Recording.query.get(recording_id)
+        recording = db.session.get(Recording, recording_id)
         if not recording:
             return jsonify({'error': '녹음을 찾을 수 없습니다.'}), 404
         
@@ -450,7 +450,7 @@ def unlike_recording(recording_id):
 def update_recording(recording_id):
     """녹음 정보 업데이트 (하이라이트 시간 등)"""
     try:
-        recording = Recording.query.get(recording_id)
+        recording = db.session.get(Recording, recording_id)
         if not recording:
             return jsonify({'error': '녹음을 찾을 수 없습니다.'}), 404
         
@@ -465,10 +465,10 @@ def update_recording(recording_id):
             recording.is_uploaded = data['is_uploaded']
             # 업로드 여부가 True로 설정되면 업로드 날짜도 설정
             if data['is_uploaded']:
-                recording.uploaded_at = datetime.utcnow()
+                recording.uploaded_at = get_kst_now()
             # 업로드 여부가 False로 설정되면 업로드 날짜는 null로 유지 (기존 값 유지)
         
-        recording.updated_at = datetime.utcnow()
+        recording.updated_at = get_kst_now()
         db.session.commit()
         
         return jsonify({

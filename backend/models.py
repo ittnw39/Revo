@@ -2,10 +2,17 @@
 데이터베이스 모델 정의
 """
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import enum
 
 db = SQLAlchemy()
+
+# 한국 시간대 (KST, UTC+9)
+KST = timezone(timedelta(hours=9))
+
+def get_kst_now():
+    """한국 시간대 현재 시간 반환"""
+    return datetime.now(KST)
 
 class EmotionType(enum.Enum):
     """감정 타입 enum"""
@@ -22,7 +29,7 @@ class User(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_kst_now)
     
     # 관계: 사용자 -> 녹음들 (일대다)
     recordings = db.relationship('Recording', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -46,7 +53,7 @@ class Recording(db.Model):
     content = db.Column(db.Text, nullable=False)  # STT로 변환된 텍스트 내용
     keywords = db.Column(db.String(500), nullable=True)  # 쉼표로 구분된 키워드들
     audio_file = db.Column(db.String(255), nullable=False)  # 녹음 파일명
-    recorded_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    recorded_at = db.Column(db.DateTime, nullable=False, default=get_kst_now)
     
     # 감정 (일대일)
     emotion = db.Column(db.Enum(EmotionType), nullable=False)
@@ -64,8 +71,8 @@ class Recording(db.Model):
     # 위치 정보 (동/구)
     district = db.Column(db.String(50), nullable=True)  # 예: "성북동", "강남구"
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_kst_now)
+    updated_at = db.Column(db.DateTime, default=get_kst_now, onupdate=get_kst_now)
     
     def to_dict(self):
         return {

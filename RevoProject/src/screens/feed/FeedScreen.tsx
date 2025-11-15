@@ -14,7 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Text as SvgText } from 'react-native-svg';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 import DeleteConfirmModal from '../../components/DeleteConfirmModal';
@@ -416,6 +416,9 @@ const FeedScreen: FC = () => {
           <View style={styles.sadCharacterWrapper}>
             <svg xmlns="http://www.w3.org/2000/svg" width="393" height="534" viewBox="0 0 393 534" fill="none" style={{ width: '100%', height: '100%' }}>
               {/* 슬픔 캐릭터 SVG - 배경 rect는 제외하고 캐릭터만 (배경은 별도 렌더링) */}
+              {/* path를 원보다 먼저 배치하여 z-index 낮게 */}
+              <path d="M100.777 133.678H124.919C133.755 133.678 140.919 140.842 140.919 149.678V321.6C140.919 330.437 133.755 337.6 124.919 337.6H116.777C107.94 337.6 100.777 330.437 100.777 321.6V133.678Z" fill="#F5F5F5"/>
+              {/* 원들 */}
               <circle cx="140.233" cy="108.908" r="53.9077" fill="#F5F5F5"/>
               <circle cx="252.631" cy="108.908" r="53.9077" fill="#F5F5F5"/>
               <mask id="mask0_sad_feed" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="86" y="55" width="109" height="108">
@@ -438,11 +441,11 @@ const FeedScreen: FC = () => {
                   <circle cx="60.4755" cy="60.4755" r="53.9108" transform="matrix(-1 0 0 1 365.659 48.4355)" fill="#0A0A0A"/>
                 )}
               </g>
-              <path d="M100.777 133.678H124.919C133.755 133.678 140.919 140.842 140.919 149.678V321.6C140.919 330.437 133.755 337.6 124.919 337.6H116.777C107.94 337.6 100.777 330.437 100.777 321.6V133.678Z" fill="#F5F5F5"/>
+              {/* rect를 검은 원들 다음에 배치하여 가장 높은 z-index */}
               <rect x="254.921" y="144.918" width="32.9243" height="95.7798" rx="16.4621" fill="#F5F5F5"/>
               <path d="M211.568 174.927C211.568 158.87 182.666 158.067 182.666 174.927" stroke="#0A0A0A" strokeWidth="8.02842" strokeLinecap="round"/>
-              <path d="M144.111 120.03C144.111 123.65 142.673 127.121 140.113 129.681C137.554 132.241 134.082 133.678 130.463 133.678C126.843 133.678 123.371 132.241 120.812 129.681C118.252 127.121 116.814 123.65 116.814 120.03L130.463 120.03H144.111Z" fill="#F5F5F5"/>
-              <path d="M254.922 120.03C254.922 123.65 253.484 127.121 250.924 129.681C248.365 132.24 244.893 133.678 241.273 133.678C237.654 133.678 234.182 132.24 231.622 129.681C229.063 127.121 227.625 123.65 227.625 120.03L241.273 120.03H254.922Z" fill="#F5F5F5"/>
+              <path d="M153.88 120.03C153.88 123.65 152.44 127.121 149.88 129.681C147.32 132.241 143.83 133.678 140.23 133.678C136.61 133.678 133.14 132.241 130.58 129.681C128.02 127.121 126.58 123.65 126.58 120.03L140.23 120.03H153.88Z" fill="#F5F5F5"/>
+              <path d="M266.28 120.03C266.28 123.65 264.84 127.121 262.28 129.681C259.72 132.24 256.25 133.678 252.63 133.678C249.01 133.678 245.54 132.24 242.98 129.681C240.42 127.121 238.98 123.65 238.98 120.03L252.63 120.03H266.28Z" fill="#F5F5F5"/>
             </svg>
           </View>
         </View>
@@ -524,7 +527,7 @@ const FeedScreen: FC = () => {
                   {eyeAnimationState === 0 ? (
                     <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 632.03 295.332)" fill="#0A0A0A"/>
                   ) : (
-                    <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 585.338 295.332)" fill="#0A0A0A"/>
+                    <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 538.646 295.332)" fill="#0A0A0A"/>
                   )}
                 </g>
                 <mask id="mask1_1373_1361_surprise_feed" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="356" y="295" width="113" height="113">
@@ -534,15 +537,42 @@ const FeedScreen: FC = () => {
                   {eyeAnimationState === 0 ? (
                     <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 515.3 295.332)" fill="#0A0A0A"/>
                   ) : (
-                    <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 468.607 295.332)" fill="#0A0A0A"/>
+                    <circle cx="55.9891" cy="55.9891" r="55.9891" transform="matrix(-1 0 0 1 421.914 295.332)" fill="#0A0A0A"/>
                   )}
                 </g>
-                <path d="M508.63 361.202C508.63 364.961 510.123 368.566 512.781 371.225C515.439 373.883 519.045 375.376 522.804 375.376C526.563 375.376 530.169 373.883 532.827 371.225C535.485 368.566 536.979 364.961 536.979 361.202L522.804 361.202H508.63Z" fill="#F5F5F5"/>
-                <path d="M391.898 361.202C391.898 364.961 393.392 368.566 396.05 371.225C398.708 373.883 402.313 375.376 406.073 375.376C409.832 375.376 413.437 373.883 416.095 371.225C418.754 368.566 420.247 364.961 420.247 361.202L406.073 361.202H391.898Z" fill="#F5F5F5"/>
+                <path d="M515.629 361.202C515.629 364.961 517.123 368.566 519.781 371.225C522.439 373.883 526.045 375.376 529.804 375.376C533.563 375.376 537.169 373.883 539.827 371.225C542.485 368.566 543.978 364.961 543.978 361.202L529.804 361.202H515.629Z" fill="#F5F5F5"/>
+                <path d="M425.247 361.202C425.247 364.961 423.753 368.566 421.095 371.225C418.437 373.883 414.832 375.376 411.072 375.376C407.313 375.376 403.708 373.883 401.050 371.225C398.392 368.566 396.898 364.961 396.898 361.202L411.072 361.202H425.247Z" fill="#F5F5F5"/>
               </g>
               <defs>
                 <clipPath id="clip0_1373_1361_surprise_feed">
                   <rect x="104" y="112" width="711" height="676" fill="white"/>
+                </clipPath>
+              </defs>
+            </svg>
+          </View>
+        </View>
+      );
+    }
+
+    // 화남 캐릭터
+    if (emotion === '화남') {
+      return (
+        <View style={styles.angryEmotionCharacterContainer}>
+          <View style={styles.angryCharacterWrapper}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="791" height="557" viewBox="0 0 791 557" fill="none">
+              <path d="M419.629 535.046C412.208 545.738 396.689 546.544 388.2 536.679L24.6902 114.256C14.2364 102.108 21.6991 83.2169 37.633 81.4933L747.652 4.68908C764.609 2.85486 775.864 21.8074 766.139 35.8185L419.629 535.046Z" fill={emotionColor}/>
+              <path d="M412.686 268.128C412.686 248.933 378.136 247.973 378.136 268.128" stroke="#0A0A0A" strokeWidth="9.59736" strokeLinecap="round"/>
+              <g clipPath="url(#clip0_1373_1507_angry_feed)">
+                <path d="M396.885 188.442C396.885 196.905 395.218 205.285 391.98 213.104C388.741 220.922 383.994 228.026 378.01 234.01C372.026 239.994 364.922 244.741 357.104 247.98C349.285 251.218 340.905 252.885 332.442 252.885C323.98 252.885 315.6 251.218 307.781 247.98C299.963 244.741 292.859 239.994 286.875 234.01C280.891 228.026 276.144 220.922 272.905 213.104C269.667 205.285 268 196.905 268 188.442L332.442 188.442H396.885Z" fill="#F5F5F5"/>
+                <path d="M525.488 188.442C525.488 196.905 523.822 205.285 520.583 213.104C517.345 220.922 512.598 228.026 506.614 234.01C500.63 239.994 493.526 244.741 485.707 247.98C477.889 251.218 469.509 252.885 461.046 252.885C452.583 252.885 444.203 251.218 436.385 247.98C428.566 244.741 421.462 239.994 415.478 234.01C409.494 228.026 404.747 220.922 401.509 213.104C398.27 205.285 396.604 196.905 396.604 188.442L461.046 188.442H525.488Z" fill="#F5F5F5"/>
+                <path d="M372.622 189.025C372.622 194.318 371.579 199.56 369.553 204.45C367.528 209.341 364.559 213.784 360.815 217.527C357.072 221.27 352.629 224.24 347.738 226.265C342.848 228.291 337.606 229.334 332.313 229.334C327.019 229.334 321.778 228.291 316.887 226.265C311.997 224.24 307.553 221.27 303.81 217.527C300.067 213.784 297.098 209.341 295.072 204.45C293.047 199.56 292.004 194.318 292.004 189.025L332.313 189.025H372.622Z" fill="#0A0A0A"/>
+                <path d="M500.945 189.025C500.945 194.318 499.903 199.56 497.877 204.45C495.851 209.341 492.882 213.784 489.139 217.527C485.396 221.27 480.953 224.24 476.062 226.265C471.172 228.291 465.93 229.334 460.637 229.334C455.343 229.334 450.101 228.291 445.211 226.265C440.32 224.24 435.877 221.27 432.134 217.527C428.391 213.784 425.422 209.341 423.396 204.45C421.37 199.56 420.328 194.318 420.328 189.025L460.637 189.025H500.945Z" fill="#0A0A0A"/>
+                <path d="M308.308 203.658C308.308 207.985 306.589 212.135 303.53 215.195C300.47 218.254 296.32 219.973 291.993 219.973C287.666 219.973 283.516 218.254 280.456 215.195C277.396 212.135 275.677 207.985 275.677 203.658L291.993 203.658H308.308Z" fill="#F5F5F5"/>
+                <path d="M442.671 203.658C442.671 207.985 440.952 212.135 437.892 215.195C434.833 218.254 430.683 219.973 426.356 219.973C422.028 219.973 417.878 218.254 414.819 215.195C411.759 212.135 410.04 207.985 410.04 203.658L426.356 203.658H442.671Z" fill="#F5F5F5"/>
+              </g>
+              <defs>
+                <clipPath id="clip0_1373_1507_angry_feed">
+                  <rect width="279" height="92" fill="white" transform="translate(256 169)"/>
                 </clipPath>
               </defs>
             </svg>
@@ -734,7 +764,10 @@ const FeedScreen: FC = () => {
       </View>
 
         {/* 두 번째 화면: 상세 정보 화면 */}
-        <View style={styles.bottomScreen}>
+        <View 
+          style={styles.bottomScreen}
+          onTouchStart={handleTouchStart}
+        >
           {/* 바텀 스크린 헤더 */}
           <Header currentScreen="Feed" />
           
@@ -792,6 +825,21 @@ const FeedScreen: FC = () => {
                   <Text style={styles.locationText}>{currentRecording.district}</Text>
                 </View>
                 <Text style={styles.normalText}>에서</Text>
+              </View>
+            )}
+            {/* 좋아요 아이콘과 수 표시 - locationContainer 밖에, 키워드와 동일한 여백 */}
+            {currentRecording.district && (
+              <View style={[styles.likeContainer, { backgroundColor: getEmotionColor(currentRecording.emotion) }]}>
+                <Svg width="38" height="29" viewBox="0 0 38 29" fill="none">
+                  <Path 
+                    d="M37.5396 12.3597C37.4864 15.1714 34.6336 15.2098 34.5924 15.2102L23.0205 15.0058C23.0309 15.0725 24.128 22.171 20.5511 25.7091C19.012 27.2312 15.1695 27.8461 11.2786 28.0514C5.24305 28.3697 0.476329 23.427 0.0332704 17.3819C-0.330988 12.4115 2.31851 7.70503 6.75148 5.44745L8.51303 4.55044C8.52372 4.54467 15.5805 0.734579 18.5292 0.0985724C19.7877 -0.172823 20.5207 0.154068 20.9475 0.617854C21.6605 1.39279 21.1543 2.55306 20.4572 3.34408L16.0274 8.37048L34.7008 9.40628C34.7064 9.40652 37.5932 9.53037 37.5396 12.3597Z" 
+                    fill="#0A0A0A"
+                  />
+                </Svg>
+                <View style={styles.likeTextContainer}>
+                  <Text style={styles.likeCount}>{currentRecording.likes || 0}</Text>
+                  <Text style={styles.likePlus}>+</Text>
+                </View>
               </View>
             )}
       </View>
@@ -995,6 +1043,36 @@ const styles = StyleSheet.create({
     marginTop: 10,
     gap: 8,
   },
+  likeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10, // 키워드와 동일한 여백
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    gap: 8,
+    alignSelf: 'flex-start',
+  },
+  likeTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  likeCount: {
+    color: '#000000',
+    fontSize: 40,
+    fontWeight: '600',
+    letterSpacing: 1.6,
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  likePlus: {
+    color: '#000000',
+    fontSize: 40,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+    marginLeft: 0,
+    ...(Platform.OS === 'web' ? { bottom: 3.5 } : { marginTop: -3.5 }),
+  },
   locationContainer: {
     marginTop: 8,
     flexDirection: 'row',
@@ -1063,7 +1141,6 @@ const styles = StyleSheet.create({
   characterEyesContainer: {
     width: 337,
     height: 138,
-    paddingTop: 9,
     paddingRight: 44.971,
     paddingBottom: 8.056,
     paddingLeft: 45,
@@ -1122,7 +1199,7 @@ const styles = StyleSheet.create({
   surpriseEmotionCharacterContainer: {
     position: 'absolute',
     left: -102,
-    top: 280, // 놀람 캐릭터만 top: 280 적용
+    top: 298, // 놀람 캐릭터만 top: 280 적용
     width: 598,
     height: 598,
     overflow: 'hidden',
@@ -1130,9 +1207,26 @@ const styles = StyleSheet.create({
   surpriseCharacterWrapper: {
     position: 'absolute',
     top: 0,
-    left: -148,
+    left: -138,
     width: 628,
     height: 658,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  angryEmotionCharacterContainer: {
+    position: 'absolute',
+    left: -199,
+    top: 332,
+    width: 791,
+    height: 557,
+    overflow: 'hidden',
+  },
+  angryCharacterWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 791,
+    height: 557,
     justifyContent: 'center',
     alignItems: 'center',
   },
