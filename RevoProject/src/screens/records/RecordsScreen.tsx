@@ -1081,45 +1081,64 @@ const RecordsScreen: FC = () => {
       {/* 페이지바 (기록이 2개 이상일 때만 표시, 네비게이션 바 상단 10px 간격) */}
       {todayRecordings.length > 1 && (
         <View style={styles.pageIndicatorContainer}>
-          <Svg width="75" height="14" viewBox="0 0 75 14" fill="none">
-            {todayRecordings.map((_, index) => {
-              if (index === 0) {
-                // 첫 번째 페이지
-                return (
-                  <Circle 
-                    key={index} 
-                    cx={7} 
-                    cy={7} 
-                    r={7} 
-                    fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
-                  />
-                );
-              } else if (index === todayRecordings.length - 1) {
-                // 마지막 페이지 (타원)
-                return (
-                  <Ellipse
-                    key={index}
-                    cx={67.5}
-                    cy={7}
-                    rx={7.5}
-                    ry={7}
-                    fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
-                  />
-                );
-              } else {
-                // 중간 페이지
-                return (
-                  <Circle 
-                    key={index} 
-                    cx={37} 
-                    cy={7} 
-                    r={7} 
-                    fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
-                  />
-                );
-              }
-            })}
-          </Svg>
+          {todayRecordings.map((_, index) => {
+            if (index === 0) {
+              // 첫 번째 페이지
+              return (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setCurrentPageIndex(index)}
+                  style={styles.pageIndicatorTouchable}
+                >
+                  <Svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <Circle 
+                      cx={7} 
+                      cy={7} 
+                      r={7} 
+                      fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
+                    />
+                  </Svg>
+                </TouchableOpacity>
+              );
+            } else if (index === todayRecordings.length - 1) {
+              // 마지막 페이지 (타원)
+              return (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setCurrentPageIndex(index)}
+                  style={styles.pageIndicatorTouchable}
+                >
+                  <Svg width="15" height="14" viewBox="0 0 15 14" fill="none">
+                    <Ellipse
+                      cx={7.5}
+                      cy={7}
+                      rx={7.5}
+                      ry={7}
+                      fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
+                    />
+                  </Svg>
+                </TouchableOpacity>
+              );
+            } else {
+              // 중간 페이지
+              return (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setCurrentPageIndex(index)}
+                  style={styles.pageIndicatorTouchable}
+                >
+                  <Svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <Circle 
+                      cx={7} 
+                      cy={7} 
+                      r={7} 
+                      fill={currentPageIndex === index ? "#CECECE" : "#2C2C2C"}
+                    />
+                  </Svg>
+                </TouchableOpacity>
+              );
+            }
+          })}
         </View>
       )}
 
@@ -1220,6 +1239,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '500',
     letterSpacing: 0.48,
+    lineHeight: 20, // 폰트 크기보다 작게 설정하여 위쪽 여백 줄임
+    textAlign: 'center',
   },
   selectedDayNumber: {
     color: '#0A0A0A',
@@ -1478,9 +1499,17 @@ const styles = StyleSheet.create({
     bottom: 92, // 네비게이션 바(bottom: 24, height: 58) 상단에서 10px 간격 = 24 + 58 + 10 = 92
     left: 0,
     right: 0,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 15, // 인디케이터 간격
     zIndex: 1000, // 네비게이션 바와 같은 z-index로 고정
+  },
+  pageIndicatorTouchable: {
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   contentText: {
     color: '#FFFFFF',
