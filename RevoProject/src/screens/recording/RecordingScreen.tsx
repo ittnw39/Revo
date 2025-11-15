@@ -1544,10 +1544,10 @@ const RecordingScreen: FC = () => {
               
               {/* 감정 캐릭터 (놀람) */}
               {recordingData.emotion === '놀람' && (
-                <View style={styles.surpriseEmotionCharacterContainer}>
+                <View style={styles.emotionCharacterContainer}>
                   {/* 놀람 캐릭터 SVG 전체 */}
                   <View style={styles.surpriseCharacterWrapper}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="919" height="927" viewBox="0 0 919 927" fill="none" style={{ width: '100%', height: '100%' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="711" height="676" viewBox="104 112 711 676" fill="none" style={{ width: '100%', height: '100%' }}>
                       <g clipPath="url(#clip0_1373_1361_surprise_recording)">
                         <path d="M356.24 212.801C388.742 112.771 530.258 112.771 562.76 212.801C577.295 257.536 618.983 287.824 666.02 287.824C771.198 287.824 814.929 422.414 729.838 484.236C691.784 511.883 675.861 560.89 690.396 605.625C722.898 705.655 608.409 788.836 523.318 727.014C485.264 699.367 433.736 699.367 395.682 727.014C310.591 788.836 196.102 705.655 228.604 605.625C243.139 560.89 227.216 511.883 189.162 484.236C104.071 422.414 147.802 287.824 252.98 287.824C300.017 287.824 341.705 257.536 356.24 212.801Z" fill="#F99841"/>
                         <mask id="path-2-inside-1_surprise_recording" fill="white">
@@ -1582,7 +1582,7 @@ const RecordingScreen: FC = () => {
                       </g>
                       <defs>
                         <clipPath id="clip0_1373_1361_surprise_recording">
-                          <rect width="919" height="927" fill="white"/>
+                          <rect x="104" y="112" width="711" height="676" fill="white"/>
                         </clipPath>
                       </defs>
                     </svg>
@@ -2360,20 +2360,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  surpriseEmotionCharacterContainer: {
-    position: 'absolute',
-    left: -102,
-    top: 318,
-    width: 598,
-    height: 598,
-    overflow: 'hidden',
-  },
   surpriseCharacterWrapper: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    width: 919,
-    height: 927,
+    left: -138,
+    width: 598,
+    height: 598,
     justifyContent: 'center',
     alignItems: 'center',
   },

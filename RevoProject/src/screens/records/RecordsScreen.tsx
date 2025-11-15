@@ -9,6 +9,7 @@ import {
   ScrollView,
   Animated,
   Platform,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,7 +20,7 @@ import { useApp } from '../../contexts/AppContext';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 import DeleteConfirmModal from '../../components/DeleteConfirmModal';
-import { getRecordings, getUserFromStorage, Recording, getAudioUrl, deleteRecording } from '../../services/api';
+import { getRecordings, getUserFromStorage, Recording, getAudioUrl, deleteRecording, updateRecording } from '../../services/api';
 
 // 웹 환경에서 document 사용을 위한 타입 선언
 declare const document: {
@@ -283,6 +284,34 @@ const RecordsScreen: FC = () => {
       return parseInt(parts[0]) * 60 + parseInt(parts[1]);
     }
     return 0;
+  };
+
+  // 녹음 업로드 함수
+  const handleUpload = async () => {
+    if (!selectedRecording || selectedRecording.is_uploaded) return;
+
+    try {
+      const response = await updateRecording(selectedRecording.id, undefined, true);
+      if (response.success) {
+        // 로컬 상태 업데이트
+        setRecordings(prev => 
+          prev.map(r => 
+            r.id === selectedRecording.id 
+              ? { ...r, is_uploaded: true, uploaded_at: new Date().toISOString() }
+              : r
+          )
+        );
+        setSelectedRecording(prev => 
+          prev ? { ...prev, is_uploaded: true, uploaded_at: new Date().toISOString() } : null
+        );
+        
+        // 피드 페이지로 이동하고 해당 기록 표시
+        navigation.navigate('Feed', { recordingId: selectedRecording.id });
+      }
+    } catch (error) {
+      console.error('업로드 오류:', error);
+      Alert.alert('오류', '업로드에 실패했습니다.');
+    }
   };
 
   // 녹음 삭제 함수
@@ -850,8 +879,14 @@ const RecordsScreen: FC = () => {
                   </View>
                   <Text style={styles.userName}>{userName}</Text>
                 </View>
-                <TouchableOpacity style={styles.uploadButton}>
-                  <Text style={styles.uploadButtonText}>업로드</Text>
+                <TouchableOpacity 
+                  style={styles.uploadButton}
+                  onPress={handleUpload}
+                  disabled={!selectedRecording || selectedRecording.is_uploaded}
+                >
+                  <Text style={styles.uploadButtonText}>
+                    {selectedRecording?.is_uploaded ? '업로드됨' : '업로드'}
+                  </Text>
                 </TouchableOpacity>
             </View>
 
