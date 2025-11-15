@@ -153,12 +153,25 @@ const RecordsScreen: FC = () => {
 
   // 선택한 날짜의 녹음 데이터 가져오기
   const selectedDateRecordings = useMemo(() => {
-    const dateString = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-    return recordings.filter(rec => {
+    const selectedDateCopy = new Date(selectedDate);
+    selectedDateCopy.setHours(0, 0, 0, 0);
+    const dateString = `${selectedDateCopy.getFullYear()}-${String(selectedDateCopy.getMonth() + 1).padStart(2, '0')}-${String(selectedDateCopy.getDate()).padStart(2, '0')}`;
+    
+    const filtered = recordings.filter(rec => {
       const recDate = new Date(rec.recorded_at);
+      recDate.setHours(0, 0, 0, 0); // 시간을 0으로 설정하여 날짜만 비교
       const recDateString = `${recDate.getFullYear()}-${String(recDate.getMonth() + 1).padStart(2, '0')}-${String(recDate.getDate()).padStart(2, '0')}`;
       return recDateString === dateString;
     });
+    
+    // 디버깅용 로그
+    console.log('선택한 날짜:', dateString);
+    console.log('필터링된 녹음 개수:', filtered.length);
+    filtered.forEach((rec, idx) => {
+      console.log(`녹음 ${idx + 1}:`, rec.recorded_at, rec.id);
+    });
+    
+    return filtered;
   }, [selectedDate, recordings]);
 
   // 오늘 날짜인지 확인
@@ -175,7 +188,9 @@ const RecordsScreen: FC = () => {
 
   // 선택한 날짜의 기록 최대 3개까지
   const todayRecordings = useMemo(() => {
-    return sortedDateRecordings.slice(0, 3); // 최대 3개
+    const result = sortedDateRecordings.slice(0, 3); // 최대 3개
+    console.log('todayRecordings 개수:', result.length, '/ 전체:', sortedDateRecordings.length);
+    return result;
   }, [sortedDateRecordings]);
 
   // 현재 페이지의 녹음 가져오기
@@ -218,6 +233,7 @@ const RecordsScreen: FC = () => {
   const hasRecording = (dateString: string): boolean => {
     const hasRecord = recordings.some(rec => {
       const recDate = new Date(rec.recorded_at);
+      recDate.setHours(0, 0, 0, 0); // 시간을 0으로 설정하여 날짜만 비교
       const recDateString = `${recDate.getFullYear()}-${String(recDate.getMonth() + 1).padStart(2, '0')}-${String(recDate.getDate()).padStart(2, '0')}`;
       return recDateString === dateString;
     });

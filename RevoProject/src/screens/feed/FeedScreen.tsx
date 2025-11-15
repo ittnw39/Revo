@@ -734,7 +734,10 @@ const FeedScreen: FC = () => {
       </View>
 
         {/* 두 번째 화면: 상세 정보 화면 */}
-        <View style={styles.bottomScreen}>
+        <View 
+          style={styles.bottomScreen}
+          onTouchStart={handleTouchStart}
+        >
           {/* 바텀 스크린 헤더 */}
           <Header currentScreen="Feed" />
           
