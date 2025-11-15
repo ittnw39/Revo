@@ -12,10 +12,11 @@ RUN apt-get update && apt-get install -y \
 
 # Python 의존성 파일 복사 및 설치
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# pip 캐시 정리
-RUN pip cache purge
+# pip 캐시 없이 설치하고 즉시 정리 (디스크 공간 절약)
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip cache purge && \
+    rm -rf /root/.cache/pip
 
 # 애플리케이션 코드 복사
 COPY . .

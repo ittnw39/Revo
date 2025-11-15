@@ -16,27 +16,37 @@ echo ""
 echo "📂 현재 디렉토리: $(pwd)"
 echo ""
 
-# 0. 디스크 공간 확인 및 정리
-echo "0️⃣ 디스크 공간 확인 중..."
+# 0. 디스크 공간 확인 및 강력한 정리
+echo "0️⃣ 디스크 공간 확인 및 정리 중..."
 DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
-if [ "$DISK_USAGE" -gt 80 ]; then
-    echo "⚠️  디스크 사용량이 ${DISK_USAGE}%입니다. 정리 시작..."
-    
-    # Docker 정리
-    echo "   🗑️  Docker 정리 중..."
-    docker container prune -f 2>/dev/null || true
-    docker image prune -a -f 2>/dev/null || true
-    docker volume prune -f 2>/dev/null || true
-    docker builder prune -a -f 2>/dev/null || true
-    
-    # 시스템 캐시 정리
-    echo "   🗑️  시스템 캐시 정리 중..."
-    sudo apt-get clean 2>/dev/null || true
-    sudo apt-get autoclean 2>/dev/null || true
-    
-    echo "✅ 디스크 정리 완료"
-else
-    echo "✅ 디스크 사용량: ${DISK_USAGE}% (정상)"
+echo "   현재 디스크 사용량: ${DISK_USAGE}%"
+
+# 항상 Docker 정리 실행 (용량 확보)
+echo "   🗑️  Docker 정리 중..."
+docker container prune -f 2>/dev/null || true
+docker image prune -a -f 2>/dev/null || true
+docker volume prune -f 2>/dev/null || true
+docker network prune -f 2>/dev/null || true
+docker builder prune -a -f 2>/dev/null || true
+
+# 시스템 캐시 정리
+echo "   🗑️  시스템 캐시 정리 중..."
+sudo apt-get clean 2>/dev/null || true
+sudo apt-get autoclean 2>/dev/null || true
+sudo apt-get autoremove -y 2>/dev/null || true
+
+# 임시 파일 정리
+echo "   🗑️  임시 파일 정리 중..."
+sudo rm -rf /tmp/* 2>/dev/null || true
+sudo rm -rf /var/tmp/* 2>/dev/null || true
+
+# 정리 후 사용량 재확인
+DISK_USAGE_AFTER=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+echo "✅ 디스크 정리 완료 (정리 후: ${DISK_USAGE_AFTER}%)"
+
+if [ "$DISK_USAGE_AFTER" -gt 90 ]; then
+    echo "⚠️  경고: 디스크 사용량이 여전히 ${DISK_USAGE_AFTER}%입니다!"
+    echo "💡 AWS 콘솔에서 볼륨 크기를 늘리는 것을 권장합니다."
 fi
 
 # 1. Git 강제 Pull (로컬 변경사항 무시)
@@ -86,7 +96,17 @@ echo "5️⃣ 컨테이너 상태 확인 중..."
 sleep 3
 docker-compose ps
 
-# 6. 로그 확인
+# 6. API 키 확인
+echo ""
+echo "6️⃣ API 키 확인 중..."
+if [ -f .env ] && grep -q "OPENAI_API_KEY" .env; then
+    echo "✅ .env 파일에 OPENAI_API_KEY 설정됨"
+else
+    echo "⚠️  .env 파일에 OPENAI_API_KEY가 없습니다!"
+    echo "   프로덕션에서 감정 분석이 작동하지 않을 수 있습니다."
+fi
+
+# 7. 로그 확인
 echo ""
 echo "=========================================="
 echo "📋 최근 로그 (마지막 20줄)"
@@ -101,6 +121,7 @@ echo ""
 echo "📌 유용한 명령어:"
 echo "   로그 확인: docker-compose logs -f"
 echo "   상태 확인: docker-compose ps"
+echo "   API 키 확인: ./check_api_key.sh"
 echo "   컨테이너 중지: docker-compose down"
 echo "   컨테이너 재시작: docker-compose restart"
 echo ""
