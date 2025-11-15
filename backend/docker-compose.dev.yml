@@ -1,0 +1,33 @@
+version: '3.8'
+
+# 개발 환경용 docker-compose 설정
+# 코드 변경 시 자동 반영 (재빌드 불필요)
+# 사용법: docker-compose -f docker-compose.dev.yml up
+
+services:
+  backend:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    env_file:
+      - .env
+    volumes:
+      # 코드 변경 시 자동 반영
+      - .:/app
+      # 업로드 파일과 DB는 호스트와 공유
+      - ./uploads:/app/uploads
+      - ./instance:/app/instance
+    restart: unless-stopped
+    command: python app.py  # 개발 모드로 실행 (gunicorn 대신)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
