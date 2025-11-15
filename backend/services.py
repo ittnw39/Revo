@@ -87,16 +87,23 @@ def analyze_text_with_gpt(text):
     
     # API 키가 없으면 간단한 방식 사용
     if client is None:
-        print("[GPT 분석] OpenAI API 키가 없습니다. 간단한 키워드 추출 방식을 사용합니다.")
+        print("=" * 60)
+        print("⚠️ [GPT 분석] OpenAI API 키가 없습니다!")
+        print("⚠️ [GPT 분석] 감정 분석을 수행할 수 없어 기본값(놀람)을 사용합니다.")
+        print("⚠️ [GPT 분석] .env 파일에 OPENAI_API_KEY를 설정해주세요.")
+        print("=" * 60)
         keywords = extract_keywords_simple(text)
         return {
             'keywords': keywords,
             'emotion': EmotionType.SURPRISE
         }
     
-    print(f"[GPT 분석] API 클라이언트 확인 완료. 감정 분석만 시작...")
-    print(f"[GPT 분석] 입력 텍스트: {text}")
-    print(f"[GPT 분석] 참고: 키워드는 ChatGPT가 아닌 로컬에서 문장의 단어를 추출합니다.")
+    print("=" * 60)
+    print("✅ [GPT 분석] API 클라이언트 확인 완료!")
+    print(f"📝 [GPT 분석] 입력 텍스트: {text}")
+    print(f"📝 [GPT 분석] 텍스트 길이: {len(text)} 글자")
+    print("🚀 [GPT 분석] ChatGPT API 호출 시작...")
+    print("=" * 60)
     
     try:
         # 감정 매핑 (행복, 놀람, 화남, 슬픔, 신남, 보통)
@@ -170,9 +177,8 @@ JSON 형식 (반드시 이 형식으로만 답변):
 }}
 """
         
-        print(f"[GPT 분석] 텍스트: {text}")
-        print(f"[GPT 분석] 텍스트 길이: {len(text)}")
-        
+        # API 호출
+        print("⏳ [GPT 분석] ChatGPT API 호출 중...")
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -183,9 +189,14 @@ JSON 형식 (반드시 이 형식으로만 답변):
             max_tokens=200  # 키워드도 포함하므로 토큰 수 증가
         )
         
+        print("✅ [GPT 분석] ChatGPT API 호출 성공!")
+        
         # 응답 파싱
         result_text = response.choices[0].message.content.strip()
-        print(f"[GPT 분석] 원본 응답: {result_text}")
+        print("=" * 60)
+        print("📥 [GPT 분석] ChatGPT 원본 응답:")
+        print(result_text)
+        print("=" * 60)
         
         # 코드 블록 제거 (```json ... ``` 형식)
         if result_text.startswith('```'):
@@ -205,10 +216,16 @@ JSON 형식 (반드시 이 형식으로만 답변):
         import json
         try:
             result = json.loads(result_text)
-            print(f"[GPT 분석] 파싱된 결과: {result}")
+            print("✅ [GPT 분석] JSON 파싱 성공!")
+            print(f"📊 [GPT 분석] 파싱된 결과: {result}")
         except json.JSONDecodeError as e:
-            print(f"[GPT 분석] JSON 파싱 오류: {e}")
-            print(f"[GPT 분석] 파싱 시도한 텍스트: {result_text}")
+            print("=" * 60)
+            print("❌ [GPT 분석] JSON 파싱 오류 발생!")
+            print(f"❌ [GPT 분석] 오류 내용: {e}")
+            print(f"❌ [GPT 분석] 파싱 시도한 텍스트:")
+            print(result_text)
+            print("⚠️ [GPT 분석] 기본값(놀람)을 사용합니다.")
+            print("=" * 60)
             # 기본값 반환
             keywords = extract_keywords_simple(text)
             return {
@@ -218,7 +235,8 @@ JSON 형식 (반드시 이 형식으로만 답변):
         
         # 감정 변환
         emotion_str = result.get('emotion', '').strip()
-        print(f"[GPT 분석] 추출된 감정 문자열: '{emotion_str}'")
+        print("=" * 60)
+        print(f"🔍 [GPT 분석] 추출된 감정 문자열: '{emotion_str}'")
         
         # 감정 매핑 (대소문자 무시, 유사 감정 매핑 포함)
         emotion_str_lower = emotion_str.lower()
@@ -228,50 +246,57 @@ JSON 형식 (반드시 이 형식으로만 답변):
         for key, value in emotion_map.items():
             if key.lower() == emotion_str_lower:
                 emotion = value
+                print(f"✅ [GPT 분석] 직접 매핑 성공: '{emotion_str}' -> {emotion.value}")
                 break
         
         # 직접 매핑 실패 시 유사 감정 매핑
         if emotion is None:
+            print(f"⚠️ [GPT 분석] 직접 매핑 실패. 유사 감정 매핑 시도 중...")
             # 외로움, 우울, 힘듦 등 -> 슬픔
             if any(word in emotion_str_lower for word in ['외로', '우울', '힘들', '아쉽', '그리움', '슬픔']):
                 emotion = EmotionType.SADNESS
-                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 슬픔")
+                print(f"✅ [GPT 분석] 유사 감정 매핑 성공: '{emotion_str}' -> 슬픔")
             # 기쁨, 행복 등 -> 행복
             elif any(word in emotion_str_lower for word in ['기쁨', '행복', '좋', '즐거', '만족']):
                 emotion = EmotionType.JOY
-                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 행복")
+                print(f"✅ [GPT 분석] 유사 감정 매핑 성공: '{emotion_str}' -> 행복")
             # 분노, 화 등 -> 화남
             elif any(word in emotion_str_lower for word in ['분노', '화', '짜증']):
                 emotion = EmotionType.ANGER
-                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 화남")
+                print(f"✅ [GPT 분석] 유사 감정 매핑 성공: '{emotion_str}' -> 화남")
             # 신남, 설렘 등 -> 신남
             elif any(word in emotion_str_lower for word in ['신남', '설렘', '두근']):
                 emotion = EmotionType.EXCITEMENT
-                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 신남")
+                print(f"✅ [GPT 분석] 유사 감정 매핑 성공: '{emotion_str}' -> 신남")
             # 놀람, 깜짝 등 -> 놀람
             elif any(word in emotion_str_lower for word in ['놀람', '깜짝', '신기']):
                 emotion = EmotionType.SURPRISE
-                print(f"[GPT 분석] 유사 감정 매핑: '{emotion_str}' -> 놀람")
+                print(f"✅ [GPT 분석] 유사 감정 매핑 성공: '{emotion_str}' -> 놀람")
             else:
-                print(f"[GPT 분석] 감정 매핑 실패: '{emotion_str}' -> 기본값(놀람) 사용")
+                print(f"❌ [GPT 분석] 감정 매핑 실패: '{emotion_str}'")
+                print(f"⚠️ [GPT 분석] 기본값(놀람)을 사용합니다.")
                 emotion = EmotionType.SURPRISE
-        else:
-            print(f"[GPT 분석] 감정 매핑 성공: '{emotion_str}' -> {emotion.value}")
+        
+        print("=" * 60)
         
         # 키워드 추출 (ChatGPT에서 추출 시도, 없으면 로컬 추출)
         keywords = result.get('keywords', [])
         if not keywords or len(keywords) == 0:
-            print(f"[GPT 분석] ChatGPT에서 키워드 추출 실패. 로컬 키워드 추출 시작...")
+            print(f"⚠️ [GPT 분석] ChatGPT에서 키워드 추출 실패. 로컬 키워드 추출 시작...")
             keywords = extract_keywords_simple(text)
         else:
-            print(f"[GPT 분석] ChatGPT에서 키워드 추출 성공: {keywords}")
+            print(f"✅ [GPT 분석] ChatGPT에서 키워드 추출 성공: {keywords}")
         
         # 키워드 최대 3개로 제한 (감정 판단에 가장 중요한 순서대로)
         if len(keywords) > 3:
-            print(f"[GPT 분석] 키워드가 3개를 초과합니다 ({len(keywords)}개). 처음 3개만 사용합니다.")
+            print(f"⚠️ [GPT 분석] 키워드가 3개를 초과합니다 ({len(keywords)}개). 처음 3개만 사용합니다.")
             keywords = keywords[:3]
         
-        print(f"[GPT 분석] 최종 결과 - 키워드: {keywords}, 감정: {emotion.value}")
+        print("=" * 60)
+        print("🎉 [GPT 분석] 최종 결과:")
+        print(f"   📌 키워드: {keywords}")
+        print(f"   😊 감정: {emotion.value}")
+        print("=" * 60)
         
         return {
             'keywords': keywords,
@@ -282,14 +307,20 @@ JSON 형식 (반드시 이 형식으로만 답변):
         error_msg = str(e)
         error_type = type(e).__name__
         
-        print(f"[GPT 분석] API 오류 발생: {error_type}")
-        print(f"[GPT 분석] 오류 메시지: {error_msg}")
+        print("=" * 60)
+        print("❌ [GPT 분석] API 오류 발생!")
+        print(f"❌ [GPT 분석] 오류 타입: {error_type}")
+        print(f"❌ [GPT 분석] 오류 메시지: {error_msg}")
         import traceback
-        print(f"[GPT 분석] 상세 오류:\n{traceback.format_exc()}")
+        print("=" * 60)
+        print("📋 [GPT 분석] 상세 오류 스택:")
+        print(traceback.format_exc())
+        print("=" * 60)
+        print("⚠️ [GPT 분석] OpenAI API 오류로 인해 기본값을 사용합니다.")
+        print("⚠️ [GPT 분석] 감정: 기본값(놀람)")
+        print("⚠️ [GPT 분석] 키워드: 로컬에서 문장의 단어를 추출합니다.")
+        print("=" * 60)
         
-        # API 오류 시 기본값 반환 (키워드는 단어 추출, 감정은 놀람)
-        print("[GPT 분석] ⚠️ OpenAI API 오류로 인해 감정은 기본값(놀람)을 사용합니다.")
-        print("[GPT 분석] 키워드는 로컬에서 문장의 단어를 추출합니다 (ChatGPT 사용 안 함).")
         keywords = extract_keywords_simple(text)
         
         return {
