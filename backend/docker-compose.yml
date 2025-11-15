@@ -13,6 +13,7 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./instance:/app/instance
+      - ./.env:/app/.env
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
