@@ -408,12 +408,17 @@ const RecordsScreen: FC = () => {
     // 슬픔 캐릭터 (사각형 배경)
     if (emotion === '슬픔') {
       return (
-        <TouchableOpacity
+        <View
           style={styles.sadEmotionCharacterContainer}
-          onPressIn={handleLongPressStart}
-          onPressOut={handleLongPressEnd}
-          activeOpacity={1}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => false}
         >
+          <TouchableOpacity
+            style={{ width: '100%', height: '100%' }}
+            onPressIn={handleLongPressStart}
+            onPressOut={handleLongPressEnd}
+            activeOpacity={1}
+          >
           {/* 슬픔 색상 사각형 배경 */}
           <View style={[styles.sadCharacterBackground, { backgroundColor: emotionColor }]} />
           {/* 슬픔 캐릭터 SVG */}
@@ -452,19 +457,25 @@ const RecordsScreen: FC = () => {
               <path d="M266.28 120.03C266.28 123.65 264.84 127.121 262.28 129.681C259.72 132.24 256.25 133.678 252.63 133.678C249.01 133.678 245.54 132.24 242.98 129.681C240.42 127.121 238.98 123.65 238.98 120.03L252.63 120.03H266.28Z" fill="#F5F5F5"/>
             </svg>
           </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       );
     }
 
     // 신남 캐릭터 (별 모양 배경)
     if (emotion === '신남') {
       return (
-        <TouchableOpacity
+        <View
           style={styles.excitedEmotionCharacterContainer}
-          onPressIn={handleLongPressStart}
-          onPressOut={handleLongPressEnd}
-          activeOpacity={1}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => false}
         >
+          <TouchableOpacity
+            style={{ width: '100%', height: '100%' }}
+            onPressIn={handleLongPressStart}
+            onPressOut={handleLongPressEnd}
+            activeOpacity={1}
+          >
           {/* 신남 캐릭터 SVG (별 모양 배경 포함) */}
           <View style={styles.excitedCharacterWrapper}>
             <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" fill="none" style={{ width: '100%', height: '100%' }}>
@@ -509,19 +520,25 @@ const RecordsScreen: FC = () => {
               <path d="M331.686 313.371L333.629 314.02L333.629 314.02L331.686 313.371ZM305.554 334.707L304.905 336.65L304.905 336.65L305.554 334.707ZM297.485 301.95L295.542 301.301L295.542 301.301L297.485 301.95ZM297.485 301.948L298.134 300.005L296.191 299.356L295.542 301.299L297.485 301.948ZM331.686 313.369L333.63 314.018L334.278 312.075L332.335 311.426L331.686 313.369ZM331.686 313.371L329.743 312.722C327.352 319.88 323.38 325.656 318.995 329.236C314.587 332.836 310.024 334.04 306.203 332.764L305.554 334.707L304.905 336.65C310.528 338.528 316.537 336.532 321.587 332.41C326.659 328.268 331.031 321.798 333.629 314.02L331.686 313.371ZM305.554 334.707L306.203 332.764C302.382 331.488 299.458 327.784 298.096 322.257C296.742 316.761 297.037 309.757 299.428 302.599L297.485 301.95L295.542 301.301C292.944 309.08 292.551 316.878 294.118 323.237C295.677 329.567 299.282 334.772 304.905 336.65L305.554 334.707ZM297.485 301.95L299.428 302.599L299.429 302.597L297.485 301.948L295.542 301.299L295.542 301.301L297.485 301.95ZM297.485 301.948L296.836 303.891L331.038 315.312L331.686 313.369L332.335 311.426L298.134 300.005L297.485 301.948ZM331.686 313.369L329.743 312.72L329.743 312.722L331.686 313.371L333.629 314.02L333.63 314.018L331.686 313.369Z" fill="black" mask="url(#path-10-inside-1_excited_records)"/>
             </svg>
           </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       );
     }
 
     // 놀람 캐릭터 (전체 SVG)
     if (emotion === '놀람') {
       return (
-        <TouchableOpacity
+        <View
           style={styles.surpriseEmotionCharacterContainer}
-          onPressIn={handleLongPressStart}
-          onPressOut={handleLongPressEnd}
-          activeOpacity={1}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => false}
         >
+          <TouchableOpacity
+            style={{ width: '100%', height: '100%' }}
+            onPressIn={handleLongPressStart}
+            onPressOut={handleLongPressEnd}
+            activeOpacity={1}
+          >
           {/* 놀람 캐릭터 SVG 전체 */}
           <View style={styles.surpriseCharacterWrapper}>
             <svg xmlns="http://www.w3.org/2000/svg" width="711" height="676" viewBox="104 112 711 676" fill="none">
@@ -564,19 +581,74 @@ const RecordsScreen: FC = () => {
               </defs>
             </svg>
           </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // 보통 캐릭터
+    if (emotion === '보통') {
+      return (
+        <View
+          style={styles.normalEmotionCharacterContainer}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => false}
+        >
+          <TouchableOpacity
+            style={{ width: '100%', height: '100%' }}
+            onPressIn={handleLongPressStart}
+            onPressOut={handleLongPressEnd}
+            activeOpacity={1}
+          >
+          <View style={styles.normalCharacterWrapper}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="632" height="632" viewBox="0 0 632 632" fill="none">
+              <path d="M295.13 15.1627C307.575 6.12142 324.425 6.12142 336.87 15.1627L595.664 203.188C608.108 212.229 613.316 228.255 608.562 242.884L509.712 547.116C504.958 561.745 491.326 571.649 475.944 571.649H156.056C140.674 571.649 127.042 561.745 122.288 547.116L23.4377 242.884C18.6844 228.255 23.8916 212.229 36.3358 203.188L295.13 15.1627Z" fill={emotionColor}/>
+              <line x1="301.071" y1="319.318" x2="330.929" y2="319.318" stroke="#0A0A0A" strokeWidth="8.29396" strokeLinecap="round"/>
+              <circle cx="55.7063" cy="55.7063" r="55.7063" transform="matrix(-1 0 0 1 429.988 177.291)" fill="#F5F5F5"/>
+              <circle cx="55.7063" cy="55.7063" r="55.7063" transform="matrix(-1 0 0 1 313.84 177.291)" fill="#F5F5F5"/>
+              <mask id="mask0_1373_1493_records" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="318" y="177" width="112" height="112">
+                <circle cx="55.7063" cy="55.7063" r="55.7063" transform="matrix(-1 0 0 1 429.988 177.291)" fill="#F5F5F5"/>
+              </mask>
+              <g mask="url(#mask0_1373_1493_records)">
+                {eyeAnimationState === 0 ? (
+                  <circle cx="55.7095" cy="55.7095" r="55.7095" transform="matrix(-1 0 0 1 476.447 177.291)" fill="#0A0A0A"/>
+                ) : (
+                  <circle cx="55.7095" cy="55.7095" r="55.7095" transform="matrix(-1 0 0 1 383.529 177.291)" fill="#0A0A0A"/>
+                )}
+              </g>
+              <mask id="mask1_1373_1493_records" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="202" y="177" width="112" height="112">
+                <circle cx="55.7063" cy="55.7063" r="55.7063" transform="matrix(-1 0 0 1 313.84 177.291)" fill="#F5F5F5"/>
+              </mask>
+              <g mask="url(#mask1_1373_1493_records)">
+                {eyeAnimationState === 0 ? (
+                  <circle cx="55.7095" cy="55.7095" r="55.7095" transform="matrix(-1 0 0 1 360.299 177.291)" fill="#0A0A0A"/>
+                ) : (
+                  <circle cx="55.7095" cy="55.7095" r="55.7095" transform="matrix(-1 0 0 1 267.381 177.291)" fill="#0A0A0A"/>
+                )}
+              </g>
+              <path d="M360.663 242.831C360.663 246.572 362.149 250.159 364.794 252.804C367.439 255.449 371.026 256.935 374.766 256.935C378.507 256.935 382.094 255.449 384.739 252.804C387.384 250.159 388.87 246.572 388.87 242.831L374.766 242.831H360.663Z" fill="#F5F5F5"/>
+              <path d="M244.514 242.831C244.514 246.572 246 250.159 248.645 252.804C251.29 255.449 254.877 256.935 258.618 256.935C262.358 256.935 265.945 255.449 268.59 252.804C271.235 250.159 272.721 246.572 272.721 242.831L258.618 242.831H244.514Z" fill="#F5F5F5"/>
+            </svg>
+          </View>
+          </TouchableOpacity>
+        </View>
       );
     }
 
     // 화남 캐릭터
     if (emotion === '화남') {
       return (
-        <TouchableOpacity
+        <View
           style={styles.angryEmotionCharacterContainer}
-          onPressIn={handleLongPressStart}
-          onPressOut={handleLongPressEnd}
-          activeOpacity={1}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => false}
         >
+          <TouchableOpacity
+            style={{ width: '100%', height: '100%' }}
+            onPressIn={handleLongPressStart}
+            onPressOut={handleLongPressEnd}
+            activeOpacity={1}
+          >
           <View style={styles.angryCharacterWrapper}>
             <svg xmlns="http://www.w3.org/2000/svg" width="791" height="557" viewBox="0 0 791 557" fill="none">
               <path d="M419.629 535.046C412.208 545.738 396.689 546.544 388.2 536.679L24.6902 114.256C14.2364 102.108 21.6991 83.2169 37.633 81.4933L747.652 4.68908C764.609 2.85486 775.864 21.8074 766.139 35.8185L419.629 535.046Z" fill={emotionColor}/>
@@ -611,18 +683,24 @@ const RecordsScreen: FC = () => {
               </defs>
             </svg>
           </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       );
     }
 
     // 행복 캐릭터 및 기본 캐릭터 (원형 배경)
     return (
-      <TouchableOpacity
+      <View
         style={styles.emotionCharacterContainer}
-        onPressIn={handleLongPressStart}
-        onPressOut={handleLongPressEnd}
-        activeOpacity={1}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => false}
       >
+        <TouchableOpacity
+          style={{ width: '100%', height: '100%' }}
+          onPressIn={handleLongPressStart}
+          onPressOut={handleLongPressEnd}
+          activeOpacity={1}
+        >
         <View style={[styles.characterCircleBackground, { backgroundColor: emotionColor }]} />
         {/* 큰 캐릭터 전용 SVG */}
         <View style={styles.characterWrapper}>
@@ -679,7 +757,8 @@ const RecordsScreen: FC = () => {
             </svg>
           </View>
         </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -840,27 +919,44 @@ const RecordsScreen: FC = () => {
     // 기록이 2개 이상일 때만 스와이프 가능
     if (todayRecordings.length <= 1) return;
 
-    // 제스처 감지 플래그 초기화
-    isGestureDetectedRef.current = false;
-    
-    // long press 타이머 취소
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-
-    let startX: number;
+    let touchX: number, touchY: number;
     if (Platform.OS === 'web') {
       // 웹 환경
       const touch = e.touches?.[0] || e.nativeEvent?.touches?.[0];
       if (!touch) return;
-      startX = touch.clientX || touch.pageX;
+      touchX = touch.clientX || touch.pageX;
+      touchY = touch.clientY || touch.pageY;
     } else {
       // React Native 환경
       const touch = e.nativeEvent.touches[0];
       if (!touch) return;
-      startX = touch.pageX;
+      touchX = touch.pageX;
+      touchY = touch.pageY;
     }
+
+    // 위클리 바 영역 체크 (left: 24~369, top: 118~188)
+    // 위클리 바 영역에서는 제스처를 처리하지 않음
+    const isWeekBarArea = touchY >= 118 && touchY <= 188 && touchX >= 24 && touchX <= 369;
+    if (isWeekBarArea) {
+      return; // 위클리 바 영역에서는 제스처 처리하지 않음
+    }
+
+    // 캐릭터 영역 체크 (중앙 영역: left 0~390, top 294~926)
+    // 캐릭터 영역이면 long press 타이머를 취소하지 않음
+    const isCharacterArea = touchY >= 294 && touchY <= 926 && touchX >= 0 && touchX <= 390;
+    
+    if (!isCharacterArea) {
+      // 캐릭터 영역이 아닐 때만 long press 타이머 취소
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }
+
+    // 제스처 감지 플래그 초기화
+    isGestureDetectedRef.current = false;
+    
+    const startX = touchX;
     
     const handleTouchMove = (moveEvent: any) => {
       let currentX: number;
@@ -922,19 +1018,22 @@ const RecordsScreen: FC = () => {
 
   // 커스텀 long press 핸들러 (제스처가 감지되지 않았을 때만 작동)
   const handleLongPressStart = () => {
-    // 제스처가 감지되지 않았을 때만 타이머 시작
-    if (!isGestureDetectedRef.current) {
-      longPressTimerRef.current = setTimeout(() => {
-        if (!isGestureDetectedRef.current) {
-          setShowDeleteModal(true);
-        }
-      }, 1000); // 1초 후 삭제 모달 표시
-    }
+    // 제스처 감지 플래그 초기화 (캐릭터 터치 시)
+    isGestureDetectedRef.current = false;
+    
+    // 타이머 시작
+    longPressTimerRef.current = setTimeout(() => {
+      // 타이머가 실행될 때 제스처가 감지되지 않았으면 삭제 모달 표시
+      if (!isGestureDetectedRef.current) {
+        setShowDeleteModal(true);
+      }
+    }, 1000); // 1초 후 삭제 모달 표시
   };
 
   const handleLongPressEnd = () => {
-    // 타이머 취소
-    if (longPressTimerRef.current) {
+    // 제스처가 감지되지 않았을 때만 타이머 취소
+    // (제스처가 감지되면 handleTouchStart에서 이미 타이머를 취소함)
+    if (!isGestureDetectedRef.current && longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
@@ -1798,6 +1897,23 @@ const styles = StyleSheet.create({
     left: 0,
     width: 791,
     height: 557,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  normalEmotionCharacterContainer: {
+    position: 'absolute',
+    left: -48,
+    top: 294,
+    width: 632,
+    height: 632,
+    overflow: 'hidden',
+  },
+  normalCharacterWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 632,
+    height: 632,
     justifyContent: 'center',
     alignItems: 'center',
   },

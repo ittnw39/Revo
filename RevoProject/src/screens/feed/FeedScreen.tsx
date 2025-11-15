@@ -554,6 +554,44 @@ const FeedScreen: FC = () => {
       );
     }
 
+    // 보통 캐릭터
+    if (emotion === '보통') {
+      return (
+        <View style={styles.normalEmotionCharacterContainer}>
+          <View style={styles.normalCharacterWrapper}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="632" height="632" viewBox="0 0 632 632" fill="none">
+              <path d="M295.13 15.1627C307.575 6.12142 324.425 6.12142 336.87 15.1627L595.664 203.188C608.108 212.229 613.316 228.255 608.562 242.884L509.712 547.116C504.958 561.745 491.326 571.649 475.944 571.649H156.056C140.674 571.649 127.042 561.745 122.288 547.116L23.4377 242.884C18.6844 228.255 23.8916 212.229 36.3358 203.188L295.13 15.1627Z" fill={emotionColor}/>
+              <line x1="301.071" y1="319.318" x2="330.929" y2="319.318" stroke="#0A0A0A" strokeWidth="8.29396" strokeLinecap="round"/>
+              <circle cx="55.7063" cy="55.7063" r="55.7063" transform="matrix(-1 0 0 1 429.988 177.291)" fill="#F5F5F5"/>
+              <circle cx="55.7063" cy="55.7063" r="55.7063" transform="matrix(-1 0 0 1 313.84 177.291)" fill="#F5F5F5"/>
+              <mask id="mask0_1373_1493_feed" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="318" y="177" width="112" height="112">
+                <circle cx="55.7063" cy="55.7063" r="55.7063" transform="matrix(-1 0 0 1 429.988 177.291)" fill="#F5F5F5"/>
+              </mask>
+              <g mask="url(#mask0_1373_1493_feed)">
+                {eyeAnimationState === 0 ? (
+                  <circle cx="55.7095" cy="55.7095" r="55.7095" transform="matrix(-1 0 0 1 476.447 177.291)" fill="#0A0A0A"/>
+                ) : (
+                  <circle cx="55.7095" cy="55.7095" r="55.7095" transform="matrix(-1 0 0 1 383.529 177.291)" fill="#0A0A0A"/>
+                )}
+              </g>
+              <mask id="mask1_1373_1493_feed" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="202" y="177" width="112" height="112">
+                <circle cx="55.7063" cy="55.7063" r="55.7063" transform="matrix(-1 0 0 1 313.84 177.291)" fill="#F5F5F5"/>
+              </mask>
+              <g mask="url(#mask1_1373_1493_feed)">
+                {eyeAnimationState === 0 ? (
+                  <circle cx="55.7095" cy="55.7095" r="55.7095" transform="matrix(-1 0 0 1 360.299 177.291)" fill="#0A0A0A"/>
+                ) : (
+                  <circle cx="55.7095" cy="55.7095" r="55.7095" transform="matrix(-1 0 0 1 267.381 177.291)" fill="#0A0A0A"/>
+                )}
+              </g>
+              <path d="M360.663 242.831C360.663 246.572 362.149 250.159 364.794 252.804C367.439 255.449 371.026 256.935 374.766 256.935C378.507 256.935 382.094 255.449 384.739 252.804C387.384 250.159 388.87 246.572 388.87 242.831L374.766 242.831H360.663Z" fill="#F5F5F5"/>
+              <path d="M244.514 242.831C244.514 246.572 246 250.159 248.645 252.804C251.29 255.449 254.877 256.935 258.618 256.935C262.358 256.935 265.945 255.449 268.59 252.804C271.235 250.159 272.721 246.572 272.721 242.831L258.618 242.831H244.514Z" fill="#F5F5F5"/>
+            </svg>
+          </View>
+        </View>
+      );
+    }
+
     // 화남 캐릭터
     if (emotion === '화남') {
       return (
@@ -1242,6 +1280,23 @@ const styles = StyleSheet.create({
     left: 0,
     width: 791,
     height: 557,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  normalEmotionCharacterContainer: {
+    position: 'absolute',
+    left: -48,
+    top: 294,
+    width: 632,
+    height: 632,
+    overflow: 'hidden',
+  },
+  normalCharacterWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 632,
+    height: 632,
     justifyContent: 'center',
     alignItems: 'center',
   },

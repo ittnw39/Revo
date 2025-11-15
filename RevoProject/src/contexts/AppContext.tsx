@@ -37,8 +37,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   useEffect(() => {
     const savedOnboardingState = localStorage.getItem('onboardingCompleted');
     const savedLastScreen = localStorage.getItem('lastVisitedScreen');
-    const savedSettingsView = localStorage.getItem('settingsView');
-    const savedAccessibilityStep = localStorage.getItem('accessibilityStep');
     
     if (savedOnboardingState === 'true') {
       setIsOnboardingCompleted(true);
@@ -48,13 +46,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setLastVisitedScreen(savedLastScreen);
     }
     
-    if (savedSettingsView) {
-      setSettingsView(savedSettingsView);
-    }
-    
-    if (savedAccessibilityStep) {
-      setAccessibilityStep(parseInt(savedAccessibilityStep, 10));
-    }
+    // settingsView와 accessibilityStep은 localStorage에 저장하지 않음 - 새로고침 시 항상 첫 화면/첫 페이지로
+    // 기존에 저장된 값이 있다면 제거
+    localStorage.removeItem('settingsView');
+    localStorage.removeItem('accessibilityStep');
   }, []);
 
   // 온보딩 완료 상태 변경 시 localStorage에 저장
@@ -73,15 +68,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     localStorage.setItem('lastVisitedScreen', screen);
   };
 
-  // 설정 화면 상태 변경 시 localStorage에 저장
+  // 설정 화면 상태 변경 - localStorage에 저장하지 않음 (새로고침 시 항상 첫 화면으로)
   const handleSetSettingsView = (view: string) => {
     setSettingsView(view);
-    localStorage.setItem('settingsView', view);
   };
 
+  // 접근성 단계 변경 - localStorage에 저장하지 않음 (설정 화면 재진입 시 항상 첫 페이지로)
   const handleSetAccessibilityStep = (step: number) => {
     setAccessibilityStep(step);
-    localStorage.setItem('accessibilityStep', step.toString());
   };
 
   const value: AppContextType = {

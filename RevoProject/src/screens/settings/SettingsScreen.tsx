@@ -84,6 +84,40 @@ const SettingsScreen: FC = () => {
     }
     // 설정 화면은 마지막 방문 화면으로 저장하지 않음 (새로고침 시 설정 화면으로 가지 않도록)
   }, [isOnboardingCompleted, navigation]);
+
+  // 설정 화면 진입 시 또는 설정 뷰 변경 시 각 step을 첫 페이지(0)로 초기화
+  useEffect(() => {
+    // 설정 화면이 마운트될 때 accessibilityStep 초기화
+    setAccessibilityStep(0);
+    setPrivacyStep(0);
+    setNotificationStep(0);
+    setShowGestureMenu(false);
+    setShowDaySelector(false);
+    setShowFriendManagement(false);
+  }, []);
+
+  // settingsView가 변경될 때 해당 step을 0으로 초기화
+  useEffect(() => {
+    if (settingsView === 'accessibility') {
+      setAccessibilityStep(0);
+      setShowGestureMenu(false);
+    } else if (settingsView === 'privacy') {
+      setPrivacyStep(0);
+    } else if (settingsView === 'notifications') {
+      setNotificationStep(0);
+      setShowDaySelector(false);
+    } else if (settingsView === 'friends') {
+      setShowFriendManagement(false);
+    } else if (settingsView === 'main') {
+      // 메인으로 돌아갈 때 모든 step 초기화
+      setAccessibilityStep(0);
+      setPrivacyStep(0);
+      setNotificationStep(0);
+      setShowGestureMenu(false);
+      setShowDaySelector(false);
+      setShowFriendManagement(false);
+    }
+  }, [settingsView]);
   
   // 웹 환경에서 스와이프 핸들러
   const handleTouchStart = (e: any) => {
