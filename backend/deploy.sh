@@ -65,11 +65,35 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ Git Pull 완료 (로컬 변경사항 무시하고 원격 저장소 상태로 강제 업데이트)"
 
-# 2. Docker Compose로 컨테이너 중지 및 제거
+# 1-1. .env 파일 자동 수정 (중복 제거)
 echo ""
-echo "2️⃣ 기존 컨테이너 중지 중..."
+echo "1-1️⃣ .env 파일 자동 수정 중..."
+if [ -f .env ]; then
+    # 백업
+    cp .env .env.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
+    
+    # OPENAI_API_KEY 중복 제거
+    if grep -q "^OPENAI_API_KEY=OPENAI_API_KEY=" .env; then
+        sed -i 's/^OPENAI_API_KEY=OPENAI_API_KEY=/OPENAI_API_KEY=/' .env
+        echo "   ✅ OPENAI_API_KEY 중복 제거 완료"
+    fi
+    
+    # ALLOWED_ORIGINS 중복 제거
+    if grep -q "^ALLOWED_ORIGINS=ALLOWED_ORIGINS=" .env; then
+        sed -i 's/^ALLOWED_ORIGINS=ALLOWED_ORIGINS=/ALLOWED_ORIGINS=/' .env
+        echo "   ✅ ALLOWED_ORIGINS 중복 제거 완료"
+    fi
+    
+    echo "   ✅ .env 파일 수정 완료"
+else
+    echo "   ⚠️  .env 파일이 없습니다"
+fi
+
+# 2. Docker Compose로 컨테이너 중지 및 제거 (환경변수 갱신을 위해 완전히 제거)
+echo ""
+echo "2️⃣ 기존 컨테이너 중지 및 제거 중..."
 docker-compose down
-echo "✅ 컨테이너 중지 완료"
+echo "✅ 컨테이너 중지 및 제거 완료"
 
 # 3. Docker 이미지 재빌드 (캐시 없이)
 echo ""
