@@ -10,9 +10,10 @@ echo "=========================================="
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 
-# Git Pull
-echo "📥 Git Pull 중..."
-git pull origin main
+# Git 강제 Pull (로컬 변경사항 무시)
+echo "📥 Git 강제 Pull 중..."
+git fetch origin main
+git reset --hard origin/main
 
 # 컨테이너 재시작
 echo "🔄 컨테이너 재시작 중..."

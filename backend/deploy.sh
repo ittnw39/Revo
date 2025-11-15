@@ -16,37 +16,25 @@ echo ""
 echo "📂 현재 디렉토리: $(pwd)"
 echo ""
 
-# 1. Git 변경사항 확인
-echo "1️⃣ Git 상태 확인 중..."
-if [ -n "$(git status --porcelain)" ]; then
-    echo "⚠️  로컬에 커밋되지 않은 변경사항이 있습니다."
-    read -p "계속하시겠습니까? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "❌ 배포 취소됨"
-        exit 1
-    fi
-fi
-
-# 2. Git Pull
-echo ""
-echo "2️⃣ Git Pull 실행 중..."
-git pull origin main
+# 1. Git 강제 Pull (로컬 변경사항 무시)
+echo "1️⃣ Git 강제 Pull 실행 중..."
+git fetch origin main
+git reset --hard origin/main
 if [ $? -ne 0 ]; then
     echo "❌ Git Pull 실패"
     exit 1
 fi
-echo "✅ Git Pull 완료"
+echo "✅ Git Pull 완료 (로컬 변경사항 무시하고 원격 저장소 상태로 강제 업데이트)"
 
-# 3. Docker Compose로 컨테이너 중지 및 제거
+# 2. Docker Compose로 컨테이너 중지 및 제거
 echo ""
-echo "3️⃣ 기존 컨테이너 중지 중..."
+echo "2️⃣ 기존 컨테이너 중지 중..."
 docker-compose down
 echo "✅ 컨테이너 중지 완료"
 
-# 4. Docker 이미지 재빌드 (캐시 없이)
+# 3. Docker 이미지 재빌드 (캐시 없이)
 echo ""
-echo "4️⃣ Docker 이미지 재빌드 중..."
+echo "3️⃣ Docker 이미지 재빌드 중..."
 docker-compose build --no-cache
 if [ $? -ne 0 ]; then
     echo "❌ Docker 빌드 실패"
@@ -54,9 +42,9 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ Docker 빌드 완료"
 
-# 5. 컨테이너 시작
+# 4. 컨테이너 시작
 echo ""
-echo "5️⃣ 컨테이너 시작 중..."
+echo "4️⃣ 컨테이너 시작 중..."
 docker-compose up -d
 if [ $? -ne 0 ]; then
     echo "❌ 컨테이너 시작 실패"
@@ -64,13 +52,13 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ 컨테이너 시작 완료"
 
-# 6. 컨테이너 상태 확인
+# 5. 컨테이너 상태 확인
 echo ""
-echo "6️⃣ 컨테이너 상태 확인 중..."
+echo "5️⃣ 컨테이너 상태 확인 중..."
 sleep 3
 docker-compose ps
 
-# 7. 로그 확인
+# 6. 로그 확인
 echo ""
 echo "=========================================="
 echo "📋 최근 로그 (마지막 20줄)"
