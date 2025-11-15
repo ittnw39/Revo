@@ -87,6 +87,9 @@ if [ -f .env ]; then
     echo "   ✅ .env 파일 수정 완료"
 else
     echo "   ⚠️  .env 파일이 없습니다"
+    echo "   💡 .env 파일을 생성하고 OPENAI_API_KEY를 설정하세요:"
+    echo "      nano .env"
+    echo "      (다음 줄 추가: OPENAI_API_KEY=sk-your-key-here)"
 fi
 
 # 2. Docker Compose로 컨테이너 중지 및 제거 (환경변수 갱신을 위해 완전히 제거)
