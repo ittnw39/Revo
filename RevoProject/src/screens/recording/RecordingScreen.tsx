@@ -465,10 +465,10 @@ const RecordingScreen: FC = () => {
   const handleKeywordsNext = () => {
     setShowKeywords(false);
     setShowHighlight(true);
-    // 하이라이트 화면 진입 시 마커 숨김 및 상태 초기화
-    setShowHighlightMarker(false);
-    setHighlightTime('');
-    setHighlightTimeSeconds(0);
+    // 하이라이트 화면 진입 시 0.99초에 마커 표시
+    setHighlightTimeSeconds(0.99);
+    setHighlightTime(formatHighlightTime(0.99));
+    setShowHighlightMarker(true);
     setHighlightTimeInput('');
     setIsDragging(false);
     isDraggingRef.current = false; // ref도 초기화
@@ -551,11 +551,11 @@ const RecordingScreen: FC = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // 초를 "MM:SS" 형식으로 변환 (저장용 - 정수로 반올림)
+  // 초를 "MM:SS" 형식으로 변환 (저장용 - 정수로 내림)
   const secondsToTimeString = (seconds: number): string => {
-    const roundedSeconds = Math.round(seconds); // 저장할 때만 반올림
-    const mins = Math.floor(roundedSeconds / 60);
-    const secs = roundedSeconds % 60;
+    const flooredSeconds = Math.floor(seconds); // 저장할 때 내림 처리 (3.9초면 3초로)
+    const mins = Math.floor(flooredSeconds / 60);
+    const secs = flooredSeconds % 60;
     return `${mins}:${secs}`;
   };
 
