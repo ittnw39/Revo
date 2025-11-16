@@ -741,12 +741,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 0,
     alignSelf: 'center',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   tabButton: {
     paddingHorizontal: 32,
