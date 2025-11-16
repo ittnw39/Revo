@@ -421,10 +421,19 @@ const ArchiveScreen: FC = () => {
                           {location.district}에서 {location.count}회{'\n'}기록했어요
                         </Text>
                         {/* 카드 오른쪽 아이콘 영역 */}
-                        <View style={styles.locationCardIcon}>
-                          {/* 각 카드별로 다른 아이콘 (임시로 원형으로 표시) */}
-                          <View style={[styles.locationIconCircle, { backgroundColor: index === 0 ? '#FED046' : index === 1 ? '#EE47CA' : index === 2 ? '#5CC463' : '#47AFF4' }]} />
-                        </View>
+                        {index === 0 ? (
+                          // 첫 번째 카드: SVG 아이콘 (카드 내부 절대 위치)
+                          <View style={styles.locationCardSvgContainer}>
+                            <Svg width="169" height="73" viewBox="0 0 169 73" fill="none">
+                              <Path d="M84.5 168C131.168 168 169 130.392 169 84C169 37.6081 131.168 0 84.5 0C37.8319 0 0 37.6081 0 84C0 130.392 37.8319 168 84.5 168Z" fill="#FED046"/>
+                            </Svg>
+                          </View>
+                        ) : (
+                          // 다른 카드: 기존 원형 아이콘
+                          <View style={styles.locationCardIcon}>
+                            <View style={[styles.locationIconCircle, { backgroundColor: index === 1 ? '#EE47CA' : index === 2 ? '#5CC463' : '#47AFF4' }]} />
+                          </View>
+                        )}
                       </View>
                     </TouchableOpacity>
                   );
@@ -870,6 +879,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
     paddingLeft: 20,
+    overflow: 'hidden', // 카드 밖으로 넘어가는 부분 가리기
   },
   emptyLocationCard: {
     position: 'absolute',
@@ -906,6 +916,15 @@ const styles = StyleSheet.create({
   locationCardIcon: {
     width: 80,
     height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationCardSvgContainer: {
+    position: 'absolute',
+    top: 23, // 카드 상단에서 23px 떨어진 위치
+    right: 23, // 카드 오른쪽에서 23px 떨어진 위치
+    width: 169,
+    height: 73,
     justifyContent: 'center',
     alignItems: 'center',
   },
