@@ -787,18 +787,19 @@ const styles = StyleSheet.create({
   emotionKeywordsContainer: {
     position: 'absolute',
     top: 576,
-    left: 126,
-    alignItems: 'flex-start',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
   emotionKeywordsContent: {
-    alignItems: 'flex-start', // 왼쪽 정렬
+    alignItems: 'center',
   },
   emotionTag: {
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
     marginBottom: 10,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -815,7 +816,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     marginBottom: 10,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
