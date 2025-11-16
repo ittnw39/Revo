@@ -1,4 +1,5 @@
-import { FC, useEffect, useState, useMemo, useRef } from 'react';
+import { FC, useEffect, useState, useMemo, useRef, useCallback, memo } from 'react';
+import { findNodeHandle } from 'react-native';
 import {
   View,
   Text,
@@ -12,7 +13,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import Svg, { Circle, Path, ClipPath, Defs, G } from 'react-native-svg';
+import Svg, { Circle, Path, ClipPath, Defs, G, Rect } from 'react-native-svg';
 
 import { useApp } from '../../contexts/AppContext';
 import NavigationBar from '../../components/NavigationBar';
@@ -23,7 +24,8 @@ import { getRecordings, getUserFromStorage, Recording } from '../../services/api
 declare const document: {
   addEventListener: (event: string, handler: (e: any) => void) => void;
   removeEventListener: (event: string, handler: (e: any) => void) => void;
-};
+  getElementById: (id: string) => HTMLElement | null;
+} | undefined;
 
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 390;
@@ -31,6 +33,235 @@ const screenHeight = 844;
 
 type EmotionDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EmotionDetail'>;
 type EmotionDetailScreenRouteProp = RouteProp<RootStackParamList, 'EmotionDetail'>;
+
+// 웨이브 원 컴포넌트 (각 원이 독립적으로 애니메이션)
+interface WaveCircleProps {
+  recording: Recording;
+  index: number;
+  position: 'prev' | 'current' | 'next';
+  getEmotionColor: (emotion: string) => string;
+  getHappyWaveColor: (index: number) => string;
+  getEmotionWaveColors: (emotion: string) => string[];
+  waveHeights: number[];
+}
+
+const WaveCircle = memo<WaveCircleProps>(({ 
+  recording, 
+  index, 
+  position,
+  getEmotionColor,
+  getHappyWaveColor,
+  getEmotionWaveColors,
+  waveHeights
+}) => {
+  // 각 원마다 독립적인 웨이브 오프셋 (ref로 관리하여 리렌더링 방지)
+  const waveOffsetRef = useRef<number>(0);
+  const wavePathRef = useRef<any>(null);
+  const waveFillRef = useRef<any>(null);
+  
+  useEffect(() => {
+    // 각 원마다 다른 초기 오프셋
+    const offsetVariation = recording.id ? (recording.id % 60) * 4 : 0;
+    waveOffsetRef.current = offsetVariation;
+    
+    let animationFrameId: number;
+    let lastTime = Date.now();
+    
+    const animate = () => {
+      const currentTime = Date.now();
+      const deltaTime = currentTime - lastTime;
+      
+      // ref만 업데이트 (리렌더링 없음)
+      waveOffsetRef.current = (waveOffsetRef.current + (deltaTime / 8.25) * 4) % 240;
+      
+      // SVG 요소 직접 업데이트 (리렌더링 없이)
+      if (Platform.OS === 'web') {
+        let wavePathElement: any = null;
+        let waveFillElement: any = null;
+        
+        // ref에서 직접 DOM 요소 찾기
+        if (wavePathRef.current) {
+          const nodeHandle = findNodeHandle(wavePathRef.current);
+          if (nodeHandle && typeof document !== 'undefined') {
+            wavePathElement = document.getElementById(`wave-path-${recording.id}`);
+          }
+        }
+        
+        if (waveFillRef.current) {
+          const nodeHandle = findNodeHandle(waveFillRef.current);
+          if (nodeHandle && typeof document !== 'undefined') {
+            waveFillElement = document.getElementById(`wave-fill-${recording.id}`);
+          }
+        }
+        
+        // 또는 직접 ID로 찾기
+        if (!wavePathElement && typeof document !== 'undefined') {
+          wavePathElement = document.getElementById(`wave-path-${recording.id}`);
+        }
+        if (!waveFillElement && typeof document !== 'undefined') {
+          waveFillElement = document.getElementById(`wave-fill-${recording.id}`);
+        }
+        
+        if (wavePathElement && waveFillElement) {
+          const emotionColor = getEmotionColor(recording.emotion || '');
+          const viewBoxSize = 400;
+          const circleRadius = 192;
+          const circleCenterY = viewBoxSize / 2;
+          const circleBottom = circleCenterY + circleRadius;
+          const circleHeight = circleRadius * 2;
+          
+          const seed = recording.id * 7919;
+          const randomIndex = seed % waveHeights.length;
+          const waveHeight = waveHeights[randomIndex];
+          const waterHeight = (circleHeight * waveHeight) / 100;
+          const waterTopY = circleBottom - waterHeight;
+          const waveY = waterTopY;
+          
+          const currentWaveOffset = waveOffsetRef.current;
+          const wavePath = createWavePath(waveY, currentWaveOffset, viewBoxSize);
+          const waveFillPath = createWaveFillPath(waveY, currentWaveOffset, viewBoxSize, circleBottom);
+          
+          wavePathElement.setAttribute('d', wavePath);
+          waveFillElement.setAttribute('d', waveFillPath);
+        }
+      }
+      
+      lastTime = currentTime;
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    
+    animationFrameId = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [recording.id, getEmotionColor, waveHeights]);
+  
+  const emotionColor = getEmotionColor(recording.emotion || '');
+  const circleSize = 231;
+  
+  // 행복 감정인 경우 특별 처리
+  const isHappy = recording.emotion === '행복' || recording.emotion === '기쁨';
+  let waveColor: string;
+  if (isHappy) {
+    waveColor = getHappyWaveColor(index);
+  } else {
+    const emotionColors = getEmotionWaveColors(recording.emotion || '');
+    const colorIndex = recording.id ? recording.id % emotionColors.length : index % emotionColors.length;
+    waveColor = emotionColors[colorIndex];
+  }
+  
+  // 각 기록마다 고정된 높이 선택
+  const seed = recording.id * 7919;
+  const randomIndex = seed % waveHeights.length;
+  const waveHeight = waveHeights[randomIndex];
+  
+  // 물의 높이에 따른 위치 계산
+  const viewBoxSize = 400;
+  const circleRadius = 192;
+  const circleCenterY = viewBoxSize / 2;
+  const circleBottom = circleCenterY + circleRadius;
+  const circleHeight = circleRadius * 2;
+  
+  const waterHeight = (circleHeight * waveHeight) / 100;
+  const waterTopY = circleBottom - waterHeight;
+  const waveY = waterTopY;
+  
+  // 웨이브 경로 생성 (초기값만 사용, 이후는 DOM 직접 업데이트)
+  const initialOffset = recording.id ? (recording.id % 60) * 4 : 0;
+  const wavePath = createWavePath(waveY, initialOffset, viewBoxSize);
+  const waveFillPath = createWaveFillPath(waveY, initialOffset, viewBoxSize, circleBottom);
+  
+  return (
+    <View style={[styles.waveCircleContainer, { width: circleSize, height: circleSize }]}>
+      <Svg 
+        width={circleSize} 
+        height={circleSize} 
+        viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`} 
+        style={{ position: 'absolute', top: 0, left: 0 }}
+      >
+        <Defs>
+          <ClipPath id={`circleClip_${recording.id}`}>
+            <Circle cx={viewBoxSize / 2} cy={viewBoxSize / 2} r={circleRadius} />
+          </ClipPath>
+        </Defs>
+        
+        <Circle cx={viewBoxSize / 2} cy={viewBoxSize / 2} r={circleRadius} fill="#0A0A0A" />
+        
+        <G clipPath={`url(#circleClip_${recording.id})`}>
+          <Path
+            ref={waveFillRef}
+            id={`wave-fill-${recording.id}`}
+            d={waveFillPath}
+            fill={waveColor}
+            fillOpacity="0.6"
+          />
+          
+          <Path
+            ref={wavePathRef}
+            id={`wave-path-${recording.id}`}
+            d={wavePath}
+            stroke={emotionColor}
+            strokeWidth="6"
+            fill="none"
+            strokeLinecap="round"
+          />
+        </G>
+        
+        <Circle 
+          cx={viewBoxSize / 2} 
+          cy={viewBoxSize / 2} 
+          r={circleRadius} 
+          fill="none"
+          stroke={emotionColor}
+          strokeWidth="6"
+        />
+      </Svg>
+    </View>
+  );
+}, (prevProps, nextProps) => {
+  // recording.id와 다른 props만 비교 (waveOffset은 각 컴포넌트 내부에서 관리)
+  return (
+    prevProps.recording.id === nextProps.recording.id &&
+    prevProps.index === nextProps.index &&
+    prevProps.position === nextProps.position
+  );
+});
+
+WaveCircle.displayName = 'WaveCircle';
+
+// 웨이브 경로 생성 함수 (컴포넌트 외부로 이동)
+const createWavePath = (y: number, offset: number = 0, width: number = 400): string => {
+  const amplitude = 10;
+  const wavelength = 160;
+  const points: string[] = [];
+  
+  for (let x = 0; x <= width; x += 2) {
+    const waveX = (x + offset) % (wavelength * 2);
+    const normalizedX = (waveX / (wavelength * 2)) * Math.PI * 2;
+    const waveY = y + Math.sin(normalizedX) * amplitude;
+    points.push(`${x},${waveY}`);
+  }
+  
+  return `M ${points.join(' L ')}`;
+};
+
+const createWaveFillPath = (y: number, offset: number = 0, width: number = 400, bottomY: number = 400): string => {
+  const amplitude = 10;
+  const wavelength = 160;
+  const points: string[] = [];
+  
+  for (let x = 0; x <= width; x += 2) {
+    const waveX = (x + offset) % (wavelength * 2);
+    const normalizedX = (waveX / (wavelength * 2)) * Math.PI * 2;
+    const waveY = y + Math.sin(normalizedX) * amplitude;
+    points.push(`${x},${waveY}`);
+  }
+  
+  return `M ${points.join(' L ')} L ${width},${bottomY} L 0,${bottomY} Z`;
+};
 
 const EmotionDetailScreen: FC = () => {
   const navigation = useNavigation<EmotionDetailScreenNavigationProp>();
@@ -81,17 +312,27 @@ const EmotionDetailScreen: FC = () => {
   // 각 기록의 높이를 미리 계산 (인덱스 기반으로 중복 방지)
   const recordingHeights = useMemo(() => {
     const heights: { [key: number]: number } = {};
-    emotionRecordings.forEach((rec, index) => {
+    // emotionRecordings 배열을 정렬하여 일관된 순서 보장 (날짜순 또는 ID순)
+    const sortedRecordings = [...emotionRecordings].sort((a, b) => {
+      if (!a.id || !b.id) return 0;
+      return a.id - b.id; // ID 순으로 정렬
+    });
+    
+    sortedRecordings.forEach((rec, index) => {
       if (!rec.id) return;
       if (index < waveHeights.length) {
         // 첫 4개는 중복 없이 할당
         heights[rec.id] = waveHeights[index];
+        console.log(`Recording ${rec.id} (index ${index}): height ${waveHeights[index]}`);
       } else {
         // 5번째부터는 랜덤 (recording.id를 시드로 사용)
         const randomIndex = rec.id % waveHeights.length;
         heights[rec.id] = waveHeights[randomIndex];
+        console.log(`Recording ${rec.id} (index ${index}): height ${waveHeights[randomIndex]} (random)`);
       }
     });
+    console.log('recordingHeights:', heights);
+    console.log('emotionRecordings count:', emotionRecordings.length);
     return heights;
   }, [emotionRecordings]);
 
@@ -180,110 +421,7 @@ const EmotionDetailScreen: FC = () => {
   };
 
 
-  // 물결 경로 배열 (예시 코드의 animate values - 원본 그대로 사용)
-  const wavePaths = [
-    'M0,150 C60,138 110,142 180,152 C240,160 290,156 400,148 L400,400 L0,400 Z',
-    'M0,152 C70,164 120,158 190,148 C250,140 300,145 400,155 L400,400 L0,400 Z',
-    'M0,148 C55,142 115,155 175,162 C245,168 295,150 400,152 L400,400 L0,400 Z',
-    'M0,154 C65,160 125,145 185,150 C255,155 305,165 400,150 L400,400 L0,400 Z',
-  ];
 
-  // 물결 경로 테두리 배열 (fill 없는 버전)
-  const waveBorderPaths = [
-    'M0,150 C60,138 110,142 180,152 C240,160 290,156 400,148',
-    'M0,152 C70,164 120,158 190,148 C250,140 300,145 400,155',
-    'M0,148 C55,142 115,155 175,162 C245,168 295,150 400,152',
-    'M0,154 C65,160 125,145 185,150 C255,155 305,165 400,150',
-  ];
-
-  // 현재 경로 인덱스 가져오기 함수 (Animated.Value 기반)
-  const getCurrentPathIndex = (animValue: Animated.Value, pathCount: number): number => {
-    // Animated.Value를 동기적으로 읽을 수 없으므로, 애니메이션 리스너로 업데이트
-    // 하지만 렌더링 시에는 애니메이션 값의 정수 부분을 사용
-    return 0; // 기본값, 실제로는 애니메이션 리스너로 업데이트됨
-  };
-
-  // 물결 애니메이션 (Animated.loop와 Animated.timing 사용으로 부드러운 전환)
-  useEffect(() => {
-    const pathCount = wavePaths.length; // 4
-    const animationDuration = 3500; // 3.5초
-    const animations: Animated.CompositeAnimation[] = [];
-    
-    emotionRecordings.forEach((recording) => {
-      if (!recording.id) return;
-      
-      // 각 원마다 Animated.Value 생성 (없으면 생성)
-      if (!waveAnimations.current[recording.id]) {
-        waveAnimations.current[recording.id] = new Animated.Value(0);
-      }
-      
-      const animValue = waveAnimations.current[recording.id];
-      
-      // 0 → 4 반복 애니메이션 (각 경로당 1씩 증가)
-      const animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(animValue, {
-            toValue: pathCount,
-            duration: animationDuration,
-            useNativeDriver: false, // path d 속성은 native driver 미지원
-          }),
-          Animated.timing(animValue, {
-            toValue: 0,
-            duration: 0, // 즉시 리셋
-            useNativeDriver: false,
-          }),
-        ])
-      );
-      
-      animation.start();
-      animations.push(animation);
-    });
-    
-    return () => {
-      // 모든 애니메이션 정지
-      animations.forEach(anim => anim.stop());
-      Object.values(waveAnimations.current).forEach(animValue => {
-        animValue.stopAnimation();
-      });
-    };
-  }, [emotionRecordings]);
-
-  // 애니메이션 값 리스너로 경로 인덱스 업데이트
-  const [wavePathIndices, setWavePathIndices] = useState<{ [key: number]: number }>({});
-  
-  useEffect(() => {
-    const listeners: { [key: number]: string } = {};
-    
-    emotionRecordings.forEach((recording) => {
-      if (!recording.id) return;
-      
-      const animValue = waveAnimations.current[recording.id];
-      if (!animValue) return;
-      
-      const listenerId = animValue.addListener(({ value }) => {
-        const pathIndex = Math.floor(value) % wavePaths.length;
-        setWavePathIndices(prev => {
-          if (prev[recording.id!] !== pathIndex) {
-            return { ...prev, [recording.id!]: pathIndex };
-          }
-          return prev;
-        });
-      });
-      
-      listeners[recording.id] = listenerId;
-    });
-    
-    return () => {
-      emotionRecordings.forEach((recording) => {
-        if (!recording.id) return;
-        const animValue = waveAnimations.current[recording.id];
-        const listenerId = listeners[recording.id];
-        if (animValue && listenerId) {
-          animValue.removeListener(listenerId);
-        }
-      });
-    };
-  }, [emotionRecordings]);
 
   // 녹음 데이터 로드
   useEffect(() => {
@@ -407,104 +545,6 @@ const EmotionDetailScreen: FC = () => {
     }
   };
 
-  // 원형 렌더링 (물결 애니메이션 포함)
-  const renderWaveCircle = (recording: Recording | null, isCenter: boolean = false, index: number = 0) => {
-    if (!recording || !recording.id) return null;
-    
-    const emotionColor = getEmotionColor(recording.emotion || '');
-    const circleSize = 231; // LocationDetailScreen의 캐릭터 크기와 동일
-    const radius = (circleSize / 2) - 2;
-    
-    // 행복 감정인 경우 특별 처리
-    const isHappy = recording.emotion === '행복' || recording.emotion === '기쁨';
-    let waveColor: string;
-    if (isHappy) {
-      waveColor = getHappyWaveColor(index);
-    } else {
-      // 다른 감정: 색상 배열에서 순환
-      const emotionColors = getEmotionWaveColors(recording.emotion || '');
-      waveColor = emotionColors[index % emotionColors.length];
-    }
-    
-    // 모든 감정에서 공유하는 물결 높이 사용 (미리 계산된 높이 사용)
-    const waveHeight = recording.id && recordingHeights[recording.id] 
-      ? recordingHeights[recording.id] 
-      : waveHeights[0];
-    
-    // 현재 물결 경로 인덱스 (Animated.Value 기반)
-    const currentPathIndex = wavePathIndices[recording.id] || 0;
-    const currentWavePath = wavePaths[currentPathIndex];
-    const currentBorderPath = waveBorderPaths[currentPathIndex];
-    
-    // 물의 높이에 따른 transform (예시 코드: translate(0, ${300 - (percentage * 28)}))
-    // 원본: viewBox 300, percentage * 28
-    // viewBox를 400으로 설정하고 비율 조정
-    const viewBoxSize = 400; // 경로가 400까지 가므로
-    // 원본 코드: viewBox 300, r 142 (300/2 - 8)
-    // 새 코드: viewBox 400, r = 142 * (400/300) = 189.33, 또는 400/2 - 8 = 192
-    const circleRadius = 192; // viewBox 400 기준
-    
-    // 물의 높이 계산: percentage는 5~16 사이의 값
-    // 원본: translate(0, ${300 - (percentage * 28)})
-    // 예: percentage=8이면 300-224=76, percentage=10이면 300-280=20
-    // viewBox 400으로 스케일링: (400/300) * (300 - percentage * 28) = 400 - percentage * (400/300) * 28
-    const scaleFactor = viewBoxSize / 300; // 400/300 = 1.333...
-    const translateY = viewBoxSize - (waveHeight * 28 * scaleFactor);
-    
-    // translateY가 너무 작거나 크면 물결이 안 보일 수 있으므로 범위 보장
-    // 원의 중심이 200이고 반지름이 192이므로, 물결이 원 안에 보이려면 적절한 범위 필요
-    const minTranslateY = 50; // 최소 Y 위치 (물결이 보이도록)
-    const maxTranslateY = viewBoxSize - 100; // 최대 Y 위치 (물결이 원 안에 있도록)
-    const finalTranslateY = Math.max(Math.min(translateY, maxTranslateY), minTranslateY);
-    
-    return (
-      <View style={[styles.waveCircleContainer, { width: circleSize, height: circleSize }]}>
-        <Svg width={circleSize} height={circleSize} viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`} style={{ position: 'absolute', top: 0, left: 0 }}>
-          <Defs>
-            <ClipPath id={`circleClip_${recording.id}`}>
-              {/* 원의 중심을 viewBox 중앙에 맞춤 (400x400 기준) */}
-              <Circle cx={viewBoxSize / 2} cy={viewBoxSize / 2} r={circleRadius} />
-            </ClipPath>
-          </Defs>
-          
-          {/* 원형 배경 (검은색) */}
-          <Circle cx={viewBoxSize / 2} cy={viewBoxSize / 2} r={circleRadius} fill="#0A0A0A" />
-          
-          {/* 물결 애니메이션 (ClipPath 적용) */}
-          <G clipPath={`url(#circleClip_${recording.id})`}>
-            {/* 물이 채워진 영역 */}
-            <Path
-              d={currentWavePath}
-              fill={waveColor}
-              fillOpacity="0.6"
-              transform={`translate(0, ${finalTranslateY})`}
-            />
-            
-            {/* 물결 테두리 (감정 색상) */}
-            <Path
-              d={currentBorderPath}
-              fill="none"
-              stroke={emotionColor}
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              transform={`translate(0, ${finalTranslateY})`}
-            />
-          </G>
-          
-          {/* 원형 테두리 (감정 색상) - 맨 위에 그리기 */}
-          <Circle 
-            cx={viewBoxSize / 2} 
-            cy={viewBoxSize / 2} 
-            r={circleRadius} 
-            fill="none"
-            stroke={emotionColor}
-            strokeWidth="6"
-          />
-        </Svg>
-      </View>
-    );
-  };
 
   if (loading) {
     return (
@@ -597,21 +637,45 @@ const EmotionDetailScreen: FC = () => {
           {/* 이전 원 (왼쪽) */}
           {prevRecording && (
             <View style={styles.sideCircleContainer}>
-              {renderWaveCircle(prevRecording, false, emotionRecordings.findIndex(r => r.id === prevRecording.id))}
+              <WaveCircle
+                recording={prevRecording}
+                index={emotionRecordings.findIndex(r => r.id === prevRecording.id)}
+                position="prev"
+                getEmotionColor={getEmotionColor}
+                getHappyWaveColor={getHappyWaveColor}
+                getEmotionWaveColors={getEmotionWaveColors}
+                waveHeights={waveHeights}
+              />
             </View>
           )}
           
           {/* 현재 원 (가운데) */}
           {currentRecording && (
             <View style={styles.centerCircleContainer}>
-              {renderWaveCircle(currentRecording, true, emotionRecordings.findIndex(r => r.id === currentRecording.id))}
+              <WaveCircle
+                recording={currentRecording}
+                index={emotionRecordings.findIndex(r => r.id === currentRecording.id)}
+                position="current"
+                getEmotionColor={getEmotionColor}
+                getHappyWaveColor={getHappyWaveColor}
+                getEmotionWaveColors={getEmotionWaveColors}
+                waveHeights={waveHeights}
+              />
             </View>
           )}
           
           {/* 다음 원 (오른쪽) */}
           {nextRecording && (
             <View style={styles.sideCircleContainer}>
-              {renderWaveCircle(nextRecording, false, emotionRecordings.findIndex(r => r.id === nextRecording.id))}
+              <WaveCircle
+                recording={nextRecording}
+                index={emotionRecordings.findIndex(r => r.id === nextRecording.id)}
+                position="next"
+                getEmotionColor={getEmotionColor}
+                getHappyWaveColor={getHappyWaveColor}
+                getEmotionWaveColors={getEmotionWaveColors}
+                waveHeights={waveHeights}
+              />
             </View>
           )}
         </Animated.View>
