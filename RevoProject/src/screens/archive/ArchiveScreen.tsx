@@ -454,7 +454,16 @@ const ArchiveScreen: FC = () => {
                   const cardLeft = 24 + (col * 180); // 첫 번째 열: 24px, 두 번째 열: 204px
                   
                   return (
-                    <View key={index} style={[styles.emotionCard, { top: cardTop, left: cardLeft }]}>
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.emotionCard, { top: cardTop, left: cardLeft }]}
+                      onPress={() => {
+                        navigation.navigate('EmotionDetail', {
+                          emotion: emotion.emotion,
+                          viewMode: viewMode
+                        });
+                      }}
+                    >
                       {/* 감정 SVG */}
                       <View style={styles.emotionCardIcon}>
                         {emotion.emotion === '행복' || emotion.emotion === '기쁨' ? (
@@ -620,7 +629,7 @@ const ArchiveScreen: FC = () => {
                         <Text style={styles.emotionCardName}>{emotion.emotion}</Text>
                         <Text style={styles.emotionCardCount}>{emotion.count}회</Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })
               ) : (

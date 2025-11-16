@@ -25,6 +25,7 @@ import ArchiveScreen from './src/screens/archive/ArchiveScreen';
 import SettingsScreen from './src/screens/settings/SettingsScreen';
 import HighlightEditScreen from './src/screens/records/HighlightEditScreen';
 import LocationDetailScreen from './src/screens/archive/LocationDetailScreen';
+import EmotionDetailScreen from './src/screens/archive/EmotionDetailScreen';
 
 // Navigation Types
 import { RootStackParamList } from './src/types/navigation';
@@ -89,6 +90,13 @@ function AppNavigator() {
             <Stack.Screen 
               name="LocationDetail" 
               component={LocationDetailScreen}
+              options={{
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen 
+              name="EmotionDetail" 
+              component={EmotionDetailScreen}
               options={{
                 presentation: 'modal',
               }}
