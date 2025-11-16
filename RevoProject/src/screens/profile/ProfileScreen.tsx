@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from 'react';
+import { FC, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import { RootStackParamList } from '../../types/navigation';
 import { useApp } from '../../contexts/AppContext';
 import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
-import { getUserFromStorage, getUser, getRecordings, Recording } from '../../services/api';
+import DeleteConfirmModal from '../../components/DeleteConfirmModal';
+import { getUserFromStorage, getUser, getRecordings, Recording, deleteRecording } from '../../services/api';
 
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 390;
@@ -29,7 +30,11 @@ const ProfileScreen: FC = () => {
   const { isOnboardingCompleted } = useApp();
   const [userName, setUserName] = useState<string>('');
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [recordingCount, setRecordingCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // 감정별 색상 매핑
   const getEmotionColor = (emotion: string): string => {
@@ -67,6 +72,7 @@ const ProfileScreen: FC = () => {
             const response = await getUser(userInfo.id);
             if (response.success && response.user) {
               setUserName(response.user.name);
+              setRecordingCount(response.user.recording_count || 0);
             }
           } catch (error) {
             console.log('API에서 사용자 정보 가져오기 실패, 로컬 스토리지 사용:', error);
@@ -101,6 +107,55 @@ const ProfileScreen: FC = () => {
       navigation.navigate('OnBoarding');
     }
   }, [isOnboardingCompleted, navigation]);
+
+  // 장시간 누름 시작 핸들러
+  const handleLongPressStart = (recording: Recording) => {
+    setSelectedRecording(recording);
+    longPressTimerRef.current = setTimeout(() => {
+      setShowDeleteModal(true);
+    }, 1000); // 1초 후 삭제 모달 표시
+  };
+
+  // 장시간 누름 종료 핸들러
+  const handleLongPressEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // 일반 클릭 핸들러 (내기록 화면으로 이동)
+  const handleCardPress = () => {
+    // 타이머가 실행 중이면 취소하고 내기록 화면으로 이동하지 않음
+    if (longPressTimerRef.current) {
+      handleLongPressEnd();
+      return;
+    }
+    // 타이머가 실행되지 않았으면 내기록 화면으로 이동
+    navigation.navigate('Records');
+  };
+
+  // 녹음 삭제 함수
+  const handleDeleteRecording = async () => {
+    if (!selectedRecording) return;
+
+    try {
+      const response = await deleteRecording(selectedRecording.id);
+      if (response.success) {
+        // 녹음 목록에서 삭제
+        setRecordings(prev => prev.filter(r => r.id !== selectedRecording.id));
+        // 기록 개수 감소
+        setRecordingCount(prev => Math.max(0, prev - 1));
+        // 선택된 녹음 초기화
+        setSelectedRecording(null);
+        // 모달 닫기
+        setShowDeleteModal(false);
+      }
+    } catch (error) {
+      console.error('녹음 삭제 오류:', error);
+      setShowDeleteModal(false);
+    }
+  };
   
   return (
     <SafeAreaView style={styles.container}>
@@ -114,7 +169,9 @@ const ProfileScreen: FC = () => {
 
       {/* 프로필 이미지 */}
       <View style={styles.profileImageContainer}>
-        <View style={styles.profileImage} />
+        <View style={styles.profileImage}>
+          <Text style={styles.profileText}>{userName ? userName.charAt(0) : ''}</Text>
+        </View>
       </View>
 
       {/* 사용자명 */}
@@ -130,7 +187,7 @@ const ProfileScreen: FC = () => {
       {/* 통계 섹션 */}
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>9</Text>
+          <Text style={styles.statNumber}>{recordingCount}</Text>
           <Text style={styles.statLabel}>게시물</Text>
         </View>
         <View style={styles.statDivider} />
@@ -162,7 +219,9 @@ const ProfileScreen: FC = () => {
             <TouchableOpacity
               key={recording.id}
               style={[styles.emotionCard, { backgroundColor: getEmotionColor(recording.emotion) }]}
-              onPress={() => navigation.navigate('Records')}
+              onPress={handleCardPress}
+              onPressIn={() => handleLongPressStart(recording)}
+              onPressOut={handleLongPressEnd}
             >
               <Text style={styles.emotionDate}>{formatDate(recording.recorded_at)}</Text>
               <Text style={styles.emotionText}>{recording.emotion}</Text>
@@ -185,6 +244,16 @@ const ProfileScreen: FC = () => {
         onNavigateToFeed={() => navigation.navigate('Feed')}
         onNavigateToArchive={() => navigation.navigate('Archive')}
         currentPage="Profile"
+      />
+
+      {/* 삭제 확인 모달 */}
+      <DeleteConfirmModal
+        visible={showDeleteModal}
+        onConfirm={handleDeleteRecording}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setSelectedRecording(null);
+        }}
       />
     </SafeAreaView>
   );
@@ -217,6 +286,13 @@ const styles = StyleSheet.create({
     height: 104,
     borderRadius: 52,
     backgroundColor: '#C4C4C4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileText: {
+    color: '#FFFFFF',
+    fontSize: 40,
+    fontWeight: '600',
   },
   userNameContainer: {
     position: 'absolute',

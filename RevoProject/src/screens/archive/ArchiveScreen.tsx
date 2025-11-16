@@ -406,7 +406,16 @@ const ArchiveScreen: FC = () => {
                 topLocations.map((location, index) => {
                   const cardTop = 298 + (index * 108); // 첫 번째 카드: 298px, 이후 108px 간격
                   return (
-                    <View key={index} style={[styles.locationCard, { top: cardTop }]}>
+                    <TouchableOpacity 
+                      key={index} 
+                      style={[styles.locationCard, { top: cardTop }]}
+                      onPress={() => {
+                        navigation.navigate('LocationDetail', { 
+                          district: location.district, 
+                          viewMode: viewMode 
+                        });
+                      }}
+                    >
                       <View style={styles.locationCardContent}>
                         <Text style={styles.locationCardText}>
                           {location.district}에서 {location.count}회{'\n'}기록했어요
@@ -417,7 +426,7 @@ const ArchiveScreen: FC = () => {
                           <View style={[styles.locationIconCircle, { backgroundColor: index === 0 ? '#FED046' : index === 1 ? '#EE47CA' : index === 2 ? '#5CC463' : '#47AFF4' }]} />
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   );
                 })
               ) : (

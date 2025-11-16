@@ -1,6 +1,7 @@
-import { FC } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useApp } from '../contexts/AppContext';
+import { getUserFromStorage } from '../services/api';
 
 interface NavigationBarProps {
   onNavigateToRecords?: () => void;
@@ -13,6 +14,15 @@ interface NavigationBarProps {
 
 const NavigationBar: FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigateToRecording, onNavigateToProfile, onNavigateToFeed, onNavigateToArchive, currentPage }) => {
   const { setLastVisitedScreen } = useApp();
+  const [userName, setUserName] = useState<string>('');
+
+  // 사용자 이름 로드
+  useEffect(() => {
+    const userInfo = getUserFromStorage();
+    if (userInfo) {
+      setUserName(userInfo.name);
+    }
+  }, []);
 
   const handleNavigateToRecords = () => {
     setLastVisitedScreen('Records');
@@ -73,7 +83,9 @@ const NavigationBar: FC<NavigationBarProps> = ({ onNavigateToRecords, onNavigate
       </TouchableOpacity>
       
       <TouchableOpacity style={styles.navItem} onPress={handleNavigateToProfile}>
-        <View style={styles.profileImage} />
+        <View style={styles.profileImage}>
+          <Text style={styles.profileText}>{userName ? userName.charAt(0) : ''}</Text>
+        </View>
         <Text style={[styles.navText, currentPage === 'Profile' && styles.activeNavText]}>내 프로필</Text>
       </TouchableOpacity>
     </View>
@@ -119,7 +131,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#D9D9D9',
+    backgroundColor: '#C4C4C4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

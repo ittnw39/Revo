@@ -102,29 +102,38 @@ const HighlightEditScreen: FC = () => {
   }, [route.params?.recordingId]);
 
   const getMarkerPosition = (): number => {
-    if (audioDuration === 0) return 0;
-    return (highlightTime / audioDuration) * TIMELINE_WIDTH;
+    if (audioDuration === 0) return MARKER_SIZE / 2;
+    // 마커가 화면 밖으로 나가지 않도록 범위 조정
+    const usableWidth = TIMELINE_WIDTH - MARKER_SIZE;
+    // 마커 중심 위치 = 왼쪽 여유 + (시간 비율 * 사용 가능한 너비)
+    return MARKER_SIZE / 2 + (highlightTime / audioDuration) * usableWidth;
   };
 
   const updateTimeFromPosition = (clientX: number) => {
     if (!timelineRef.current || audioDuration === 0) return;
+    
+    const usableWidth = TIMELINE_WIDTH - MARKER_SIZE;
+    const minX = MARKER_SIZE / 2;
+    const maxX = TIMELINE_WIDTH - MARKER_SIZE / 2;
     
     if (Platform.OS === 'web') {
       const element = timelineRef.current as any;
       if (element && typeof element.getBoundingClientRect === 'function') {
         const rect = element.getBoundingClientRect();
         const relativeX = clientX - rect.left;
-        const clampedX = Math.max(0, Math.min(TIMELINE_WIDTH, relativeX));
-        // 0.01초 단위로 계산 (소수점 2자리)
-        const newTime = Math.round(((clampedX / TIMELINE_WIDTH) * audioDuration) * 100) / 100;
+        const clampedX = Math.max(minX, Math.min(maxX, relativeX));
+        // 사용 가능한 범위 내에서 시간 계산
+        const normalizedX = (clampedX - minX) / usableWidth;
+        const newTime = Math.round(normalizedX * audioDuration * 100) / 100;
         setHighlightTime(newTime);
       }
     } else {
       (timelineRef.current as any).measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
         const relativeX = clientX - px;
-        const clampedX = Math.max(0, Math.min(TIMELINE_WIDTH, relativeX));
-        // 0.01초 단위로 계산 (소수점 2자리)
-        const newTime = Math.round(((clampedX / TIMELINE_WIDTH) * audioDuration) * 100) / 100;
+        const clampedX = Math.max(minX, Math.min(maxX, relativeX));
+        // 사용 가능한 범위 내에서 시간 계산
+        const normalizedX = (clampedX - minX) / usableWidth;
+        const newTime = Math.round(normalizedX * audioDuration * 100) / 100;
         setHighlightTime(newTime);
       });
     }
@@ -420,7 +429,7 @@ const styles = StyleSheet.create({
   saveButton: {
     position: 'absolute',
     left: '50%',
-    top: 674,
+    top: 664,
     backgroundColor: '#B780FF',
     borderRadius: 50,
     paddingHorizontal: 32,

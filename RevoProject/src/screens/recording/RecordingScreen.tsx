@@ -287,7 +287,7 @@ const RecordingScreen: FC = () => {
   useEffect(() => {
     if (isRecording) {
       const interval = setInterval(() => {
-        setWaveOffset(prev => (prev + 2) % 120); // 0~119 사이클, 2배 빠르게
+        setWaveOffset(prev => (prev + 4) % 240); // 0~239 사이클, 4배 빠르게 (속도 2배)
       }, 33); // 약 30fps (1000/30 ≈ 33ms)
       return () => clearInterval(interval);
     } else {
@@ -590,36 +590,45 @@ const RecordingScreen: FC = () => {
     return `${mins}:${secs}`;
   };
 
-  // 마커 위치 계산 (픽셀) - 하이라이트 수정 화면과 동일
+  // 마커 위치 계산 (픽셀) - 마커가 화면 밖으로 나가지 않도록 범위 조정
   const getMarkerPosition = (): number => {
-    if (!result || result.duration === 0) return 0;
+    if (!result || result.duration === 0) return MARKER_SIZE / 2;
     const totalSeconds = result.duration;
-    return (highlightTimeSeconds / totalSeconds) * TIMELINE_WIDTH;
+    // 실제 사용 가능한 너비 = 전체 너비 - 마커 크기 (양쪽 여유)
+    const usableWidth = TIMELINE_WIDTH - MARKER_SIZE;
+    // 마커 중심 위치 = 왼쪽 여유 + (시간 비율 * 사용 가능한 너비)
+    return MARKER_SIZE / 2 + (highlightTimeSeconds / totalSeconds) * usableWidth;
   };
 
-  // 위치에서 시간 계산 (0.01초 단위로 부드럽게) - 하이라이트 수정 화면과 동일
+  // 위치에서 시간 계산 (0.01초 단위로 부드럽게) - 마커 범위 고려
   const updateTimeFromPosition = (clientX: number) => {
     if (!result || !highlightBarRef.current || result.duration === 0) return;
+    
+    const usableWidth = TIMELINE_WIDTH - MARKER_SIZE;
+    const minX = MARKER_SIZE / 2;
+    const maxX = TIMELINE_WIDTH - MARKER_SIZE / 2;
     
     if (Platform.OS === 'web') {
       const element = highlightBarRef.current as any;
       if (element && typeof element.getBoundingClientRect === 'function') {
         const rect = element.getBoundingClientRect();
         const relativeX = clientX - rect.left;
-        const clampedX = Math.max(0, Math.min(TIMELINE_WIDTH, relativeX));
+        const clampedX = Math.max(minX, Math.min(maxX, relativeX));
         const totalSeconds = result.duration;
-        // 0.01초 단위로 계산 (소수점 2자리)
-        const newTime = Math.round(((clampedX / TIMELINE_WIDTH) * totalSeconds) * 100) / 100;
+        // 사용 가능한 범위 내에서 시간 계산
+        const normalizedX = (clampedX - minX) / usableWidth;
+        const newTime = Math.round(normalizedX * totalSeconds * 100) / 100;
         setHighlightTimeSeconds(newTime);
         setHighlightTime(formatHighlightTime(newTime));
       }
     } else {
       (highlightBarRef.current as any).measure((fx: number, fy: number, width: number, height: number, px: number, py: number) => {
         const relativeX = clientX - px;
-        const clampedX = Math.max(0, Math.min(TIMELINE_WIDTH, relativeX));
+        const clampedX = Math.max(minX, Math.min(maxX, relativeX));
         const totalSeconds = result.duration;
-        // 0.01초 단위로 계산 (소수점 2자리)
-        const newTime = Math.round(((clampedX / TIMELINE_WIDTH) * totalSeconds) * 100) / 100;
+        // 사용 가능한 범위 내에서 시간 계산
+        const normalizedX = (clampedX - minX) / usableWidth;
+        const newTime = Math.round(normalizedX * totalSeconds * 100) / 100;
         setHighlightTimeSeconds(newTime);
         setHighlightTime(formatHighlightTime(newTime));
       });
@@ -1301,7 +1310,7 @@ const RecordingScreen: FC = () => {
                   style={[
                     styles.highlightMarkerContainer,
                     {
-                      left: getMarkerPosition() - MARKER_SIZE / 2, // 마커 중심 정렬
+                      left: getMarkerPosition() - MARKER_SIZE / 2, // 마커 중심 정렬 (getMarkerPosition이 이미 중심 위치를 반환)
                     }
                   ]}
                 >
@@ -1729,7 +1738,9 @@ const RecordingScreen: FC = () => {
                   // 드래그 중이면 highlightTimeSeconds 사용, 아니면 저장된 highlight_time 사용
                   const currentHighlightSeconds = isDragging ? highlightTimeSeconds : parseHighlightTime(recordingData.highlight_time);
                   const totalSeconds = Math.max(result.duration, 1);
-                  const markerPosition = (currentHighlightSeconds / totalSeconds) * TIMELINE_WIDTH;
+                  // 마커가 화면 밖으로 나가지 않도록 범위 조정
+                  const usableWidth = TIMELINE_WIDTH - MARKER_SIZE;
+                  const markerPosition = MARKER_SIZE / 2 + (currentHighlightSeconds / totalSeconds) * usableWidth;
                   
                   return (
                     <View 

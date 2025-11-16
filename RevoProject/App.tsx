@@ -24,6 +24,7 @@ import FeedScreen from './src/screens/feed/FeedScreen';
 import ArchiveScreen from './src/screens/archive/ArchiveScreen';
 import SettingsScreen from './src/screens/settings/SettingsScreen';
 import HighlightEditScreen from './src/screens/records/HighlightEditScreen';
+import LocationDetailScreen from './src/screens/archive/LocationDetailScreen';
 
 // Navigation Types
 import { RootStackParamList } from './src/types/navigation';
@@ -81,6 +82,13 @@ function AppNavigator() {
             <Stack.Screen 
               name="HighlightEdit" 
               component={HighlightEditScreen}
+              options={{
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen 
+              name="LocationDetail" 
+              component={LocationDetailScreen}
               options={{
                 presentation: 'modal',
               }}

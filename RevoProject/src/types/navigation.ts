@@ -9,4 +9,5 @@ export type RootStackParamList = {
   Archive: undefined;
   Settings: undefined;
   HighlightEdit: { recordingId: number } | undefined;
+  LocationDetail: { district: string; viewMode: 'monthly' | 'all' } | undefined;
 };
