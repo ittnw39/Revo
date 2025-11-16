@@ -821,9 +821,6 @@ const FeedScreen: FC = () => {
           style={styles.bottomScreen}
           onTouchStart={handleTouchStart}
         >
-          {/* 바텀 스크린 헤더 */}
-          <Header currentScreen="Feed" />
-          
           {/* 사용자 정보 영역 - 이름과 버튼 */}
       <View style={styles.userInfoContainer}>
         <View style={styles.userInfoLeft}>
