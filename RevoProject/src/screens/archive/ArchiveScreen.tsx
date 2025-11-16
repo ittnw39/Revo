@@ -442,6 +442,13 @@ const ArchiveScreen: FC = () => {
                               <Path d="M76.9188 9.14081C84.4208 3.69028 94.5792 3.69028 102.081 9.14081L162.038 52.7022C169.54 58.1527 172.679 67.814 169.814 76.6331L146.912 147.117C144.047 155.936 135.828 161.907 126.556 161.907H52.4445C43.1715 161.907 34.9531 155.936 32.0876 147.117L9.18605 76.6331C6.32054 67.814 9.45968 58.1527 16.9617 52.7022L76.9188 9.14081Z" fill="#5CC463"/>
                             </Svg>
                           </View>
+                        ) : index === 3 ? (
+                          // 네 번째 카드: SVG 아이콘 (카드 내부 절대 위치)
+                          <View style={styles.locationCardSvgContainerFourth}>
+                            <Svg width="83" height="64" viewBox="0 0 83 64" fill="none">
+                              <Rect width="82.9126" height="179.789" rx="11.1845" fill="#47AFF4"/>
+                            </Svg>
+                          </View>
                         ) : (
                           // 다른 카드: 기존 원형 아이콘
                           <View style={styles.locationCardIcon}>
@@ -956,6 +963,15 @@ const styles = StyleSheet.create({
     right: 18, // 카드 오른쪽에서 18px 떨어진 위치
     width: 179,
     height: 74,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationCardSvgContainerFourth: {
+    position: 'absolute',
+    top: 32, // 카드 상단에서 32px 떨어진 위치
+    right: 66, // 카드 오른쪽에서 66px 떨어진 위치
+    width: 83,
+    height: 64,
     justifyContent: 'center',
     alignItems: 'center',
   },
