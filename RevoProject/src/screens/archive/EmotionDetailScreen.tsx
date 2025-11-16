@@ -1,5 +1,4 @@
 import { FC, useEffect, useState, useMemo, useRef, useCallback, memo } from 'react';
-import { findNodeHandle } from 'react-native';
 import {
   View,
   Text,
@@ -34,6 +33,19 @@ const screenHeight = 844;
 type EmotionDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EmotionDetail'>;
 type EmotionDetailScreenRouteProp = RouteProp<RootStackParamList, 'EmotionDetail'>;
 
+// 감정 색상 가져오기 함수 (컴포넌트 외부로 이동 - 클로저 문제 방지)
+const getEmotionColor = (emotion: string): string => {
+  const emotionColorMap: { [key: string]: string } = {
+    '행복': '#FED046',
+    '슬픔': '#47AFF4',
+    '놀람': '#F99841',
+    '신남': '#EE47CA',
+    '화남': '#EE4947',
+    '보통': '#5CC463',
+  };
+  return emotionColorMap[emotion] || '#FED046';
+};
+
 // 웨이브 원 컴포넌트 (각 원이 독립적으로 애니메이션)
 interface WaveCircleProps {
   recording: Recording;
@@ -54,90 +66,8 @@ const WaveCircle = memo<WaveCircleProps>(({
   getEmotionWaveColors,
   waveHeights
 }) => {
-  // 각 원마다 독립적인 웨이브 오프셋 (ref로 관리하여 리렌더링 방지)
-  const waveOffsetRef = useRef<number>(0);
-  const wavePathRef = useRef<any>(null);
-  const waveFillRef = useRef<any>(null);
-  
-  useEffect(() => {
-    // 각 원마다 다른 초기 오프셋
-    const offsetVariation = recording.id ? (recording.id % 60) * 4 : 0;
-    waveOffsetRef.current = offsetVariation;
-    
-    let animationFrameId: number;
-    let lastTime = Date.now();
-    
-    const animate = () => {
-      const currentTime = Date.now();
-      const deltaTime = currentTime - lastTime;
-      
-      // ref만 업데이트 (리렌더링 없음)
-      waveOffsetRef.current = (waveOffsetRef.current + (deltaTime / 8.25) * 4) % 240;
-      
-      // SVG 요소 직접 업데이트 (리렌더링 없이)
-      if (Platform.OS === 'web') {
-        let wavePathElement: any = null;
-        let waveFillElement: any = null;
-        
-        // ref에서 직접 DOM 요소 찾기
-        if (wavePathRef.current) {
-          const nodeHandle = findNodeHandle(wavePathRef.current);
-          if (nodeHandle && typeof document !== 'undefined') {
-            wavePathElement = document.getElementById(`wave-path-${recording.id}`);
-          }
-        }
-        
-        if (waveFillRef.current) {
-          const nodeHandle = findNodeHandle(waveFillRef.current);
-          if (nodeHandle && typeof document !== 'undefined') {
-            waveFillElement = document.getElementById(`wave-fill-${recording.id}`);
-          }
-        }
-        
-        // 또는 직접 ID로 찾기
-        if (!wavePathElement && typeof document !== 'undefined') {
-          wavePathElement = document.getElementById(`wave-path-${recording.id}`);
-        }
-        if (!waveFillElement && typeof document !== 'undefined') {
-          waveFillElement = document.getElementById(`wave-fill-${recording.id}`);
-        }
-        
-        if (wavePathElement && waveFillElement) {
-          const emotionColor = getEmotionColor(recording.emotion || '');
-          const viewBoxSize = 400;
-          const circleRadius = 192;
-          const circleCenterY = viewBoxSize / 2;
-          const circleBottom = circleCenterY + circleRadius;
-          const circleHeight = circleRadius * 2;
-          
-          const seed = recording.id * 7919;
-          const randomIndex = seed % waveHeights.length;
-          const waveHeight = waveHeights[randomIndex];
-          const waterHeight = (circleHeight * waveHeight) / 100;
-          const waterTopY = circleBottom - waterHeight;
-          const waveY = waterTopY;
-          
-          const currentWaveOffset = waveOffsetRef.current;
-          const wavePath = createWavePath(waveY, currentWaveOffset, viewBoxSize);
-          const waveFillPath = createWaveFillPath(waveY, currentWaveOffset, viewBoxSize, circleBottom);
-          
-          wavePathElement.setAttribute('d', wavePath);
-          waveFillElement.setAttribute('d', waveFillPath);
-        }
-      }
-      
-      lastTime = currentTime;
-      animationFrameId = requestAnimationFrame(animate);
-    };
-    
-    animationFrameId = requestAnimationFrame(animate);
-    
-    return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-    };
-  }, [recording.id, getEmotionColor, waveHeights]);
+  // 초기 오프셋만 계산 (애니메이션은 부모에서 통합 관리)
+  const initialOffset = recording.id ? (recording.id % 60) * 4 : 0;
   
   const emotionColor = getEmotionColor(recording.emotion || '');
   const circleSize = 231;
@@ -169,8 +99,7 @@ const WaveCircle = memo<WaveCircleProps>(({
   const waterTopY = circleBottom - waterHeight;
   const waveY = waterTopY;
   
-  // 웨이브 경로 생성 (초기값만 사용, 이후는 DOM 직접 업데이트)
-  const initialOffset = recording.id ? (recording.id % 60) * 4 : 0;
+  // 웨이브 경로 생성 (초기값만 사용, 이후는 부모에서 통합 애니메이션으로 업데이트)
   const wavePath = createWavePath(waveY, initialOffset, viewBoxSize);
   const waveFillPath = createWaveFillPath(waveY, initialOffset, viewBoxSize, circleBottom);
   
@@ -192,7 +121,6 @@ const WaveCircle = memo<WaveCircleProps>(({
         
         <G clipPath={`url(#circleClip_${recording.id})`}>
           <Path
-            ref={waveFillRef}
             id={`wave-fill-${recording.id}`}
             d={waveFillPath}
             fill={waveColor}
@@ -200,7 +128,6 @@ const WaveCircle = memo<WaveCircleProps>(({
           />
           
           <Path
-            ref={wavePathRef}
             id={`wave-path-${recording.id}`}
             d={wavePath}
             stroke={emotionColor}
@@ -278,8 +205,19 @@ const EmotionDetailScreen: FC = () => {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const isAnimatingRef = useRef<boolean>(false);
   
-  // 물결 애니메이션을 위한 Animated 값들 (각 원마다 다른 애니메이션)
-  const waveAnimations = useRef<{ [key: number]: Animated.Value }>({});
+  // 전역 웨이브 애니메이션 (모든 원을 한번에 업데이트)
+  const globalWaveOffsetRef = useRef<number>(0);
+  const animationFrameIdRef = useRef<number | null>(null);
+  
+  // 현재 슬라이드의 recording ID들을 ref로 저장 (리렌더링 방지)
+  const currentRecordingsRef = useRef<{ prev: number | null; current: number | null; next: number | null }>({
+    prev: null,
+    current: null,
+    next: null,
+  });
+  
+  // emotionRecordings를 ref로 저장 (클로저 문제 방지)
+  const emotionRecordingsRef = useRef<Recording[]>([]);
   
   // 현재 월 계산
   const currentMonth = useMemo(() => {
@@ -302,6 +240,9 @@ const EmotionDetailScreen: FC = () => {
         return recDate.getFullYear() === currentYear && recDate.getMonth() + 1 === currentMonth;
       });
     }
+    
+    // ref에 저장 (리렌더링 방지)
+    emotionRecordingsRef.current = filtered;
     
     return filtered;
   }, [recordings, emotion, viewMode]);
@@ -357,19 +298,6 @@ const EmotionDetailScreen: FC = () => {
     return emotionRecordings[nextIndex];
   }, [emotionRecordings, currentSlideIndex]);
 
-  // 감정 색상 가져오기 함수
-  const getEmotionColor = (emotion: string): string => {
-    const emotionColorMap: { [key: string]: string } = {
-      '행복': '#FED046',
-      '슬픔': '#47AFF4',
-      '놀람': '#F99841',
-      '신남': '#EE47CA',
-      '화남': '#EE4947',
-      '보통': '#5CC463',
-    };
-    return emotionColorMap[emotion] || '#FED046';
-  };
-
   // HEX 색상을 RGB로 변환
   const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -420,8 +348,83 @@ const EmotionDetailScreen: FC = () => {
     ];
   };
 
-
-
+  // 현재 슬라이드의 recording ID 업데이트 (리렌더링 없이)
+  useEffect(() => {
+    currentRecordingsRef.current = {
+      prev: prevRecording?.id || null,
+      current: currentRecording?.id || null,
+      next: nextRecording?.id || null,
+    };
+  }, [prevRecording?.id, currentRecording?.id, nextRecording?.id]);
+  
+  // 현재 슬라이드의 원만 애니메이션 (prev, current, next만 업데이트, 리렌더링 없음)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    
+    let lastTime = Date.now();
+    
+    const animate = () => {
+      const currentTime = Date.now();
+      const deltaTime = currentTime - lastTime;
+      
+      // 속도 조절: 2배 빠르게 (deltaTime / 33 * 2)
+      globalWaveOffsetRef.current = (globalWaveOffsetRef.current + (deltaTime / 33) * 2) % 240;
+      
+      // 현재 슬라이드의 원들만 업데이트 (ref에서 ID 가져오기)
+      const recordingIds = [
+        currentRecordingsRef.current.prev,
+        currentRecordingsRef.current.current,
+        currentRecordingsRef.current.next,
+      ].filter((id): id is number => id !== null);
+      
+      recordingIds.forEach((recId) => {
+        const wavePathElement = (document as any).getElementById(`wave-path-${recId}`);
+        const waveFillElement = (document as any).getElementById(`wave-fill-${recId}`);
+        
+        if (wavePathElement && waveFillElement) {
+          // recording 정보는 ref에서 찾기 (리렌더링 방지)
+          const rec = emotionRecordingsRef.current.find(r => r.id === recId);
+          if (!rec) return;
+          
+          const emotionColor = getEmotionColor(rec.emotion || '');
+          const viewBoxSize = 400;
+          const circleRadius = 192;
+          const circleCenterY = viewBoxSize / 2;
+          const circleBottom = circleCenterY + circleRadius;
+          const circleHeight = circleRadius * 2;
+          
+          const seed = recId * 7919;
+          const randomIndex = seed % waveHeights.length;
+          const waveHeight = waveHeights[randomIndex];
+          const waterHeight = (circleHeight * waveHeight) / 100;
+          const waterTopY = circleBottom - waterHeight;
+          const waveY = waterTopY;
+          
+          // 각 원마다 다른 초기 오프셋 적용
+          const initialOffset = recId ? (recId % 60) * 4 : 0;
+          const currentWaveOffset = (globalWaveOffsetRef.current + initialOffset) % 240;
+          
+          const wavePath = createWavePath(waveY, currentWaveOffset, viewBoxSize);
+          const waveFillPath = createWaveFillPath(waveY, currentWaveOffset, viewBoxSize, circleBottom);
+          
+          wavePathElement.setAttribute('d', wavePath);
+          waveFillElement.setAttribute('d', waveFillPath);
+        }
+      });
+      
+      lastTime = currentTime;
+      animationFrameIdRef.current = requestAnimationFrame(animate);
+    };
+    
+    animationFrameIdRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+        animationFrameIdRef.current = null;
+      }
+    };
+  }, []); // 의존성 배열 비움 - 리렌더링 없이 ref만 사용
 
   // 녹음 데이터 로드
   useEffect(() => {
