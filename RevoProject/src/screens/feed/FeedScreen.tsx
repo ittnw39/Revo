@@ -933,13 +933,11 @@ const FeedScreen: FC = () => {
                 <TouchableOpacity
                   style={[
                     styles.likeContainer,
-                    isFilled
-                      ? { backgroundColor: emotionColor }
-                      : {
-                          backgroundColor: '#0A0A0A',
-                          borderWidth: 4,
-                          borderColor: emotionColor,
-                        },
+                    {
+                      backgroundColor: isFilled ? emotionColor : '#0A0A0A',
+                      borderWidth: 4,
+                      borderColor: emotionColor,
+                    },
                   ]}
                   onPress={handleLikeToggle}
                   disabled={isMyRec}
@@ -954,13 +952,13 @@ const FeedScreen: FC = () => {
                   <View style={styles.likeTextContainer}>
                     <Text style={[
                       styles.likeCount,
-                      { color: isFilled ? '#000000' : emotionColor }
+                      { color: isFilled ? '#0A0A0A' : emotionColor }
                     ]}>
                       {currentRecording.likes || 0}
                     </Text>
                     <Text style={[
                       styles.likePlus,
-                      { color: isFilled ? '#000000' : emotionColor }
+                      { color: isFilled ? '#0A0A0A' : emotionColor }
                     ]}>
                       +
                     </Text>
