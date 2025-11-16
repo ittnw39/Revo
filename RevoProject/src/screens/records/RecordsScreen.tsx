@@ -1374,20 +1374,38 @@ const RecordsScreen: FC = () => {
                 </View>
               )}
               {/* 좋아요 아이콘과 수 표시 - locationContainer 밖에, 키워드와 동일한 여백 */}
-              {selectedRecording.district && (
-                <View style={[styles.likeContainer, { backgroundColor: getEmotionColor(selectedRecording.emotion) }]}>
-                  <Svg width="38" height="29" viewBox="0 0 38 29" fill="none">
-                    <Path 
-                      d="M37.5396 12.3597C37.4864 15.1714 34.6336 15.2098 34.5924 15.2102L23.0205 15.0058C23.0309 15.0725 24.128 22.171 20.5511 25.7091C19.012 27.2312 15.1695 27.8461 11.2786 28.0514C5.24305 28.3697 0.476329 23.427 0.0332704 17.3819C-0.330988 12.4115 2.31851 7.70503 6.75148 5.44745L8.51303 4.55044C8.52372 4.54467 15.5805 0.734579 18.5292 0.0985724C19.7877 -0.172823 20.5207 0.154068 20.9475 0.617854C21.6605 1.39279 21.1543 2.55306 20.4572 3.34408L16.0274 8.37048L34.7008 9.40628C34.7064 9.40652 37.5932 9.53037 37.5396 12.3597Z" 
-                      fill="#0A0A0A"
-                    />
-                  </Svg>
-                  <View style={styles.likeTextContainer}>
-                    <Text style={styles.likeCount}>{selectedRecording.likes || 0}</Text>
-                    <Text style={styles.likePlus}>+</Text>
+              {selectedRecording.district && (() => {
+                const emotionColor = getEmotionColor(selectedRecording.emotion);
+                // RecordsScreen은 내 기록만 보여주므로 항상 안 누른 상태 스타일 적용
+                
+                return (
+                  <View
+                    style={[
+                      styles.likeContainer,
+                      {
+                        backgroundColor: '#0A0A0A',
+                        borderWidth: 4,
+                        borderColor: emotionColor,
+                      },
+                    ]}
+                  >
+                    <Svg width="38" height="29" viewBox="0 0 38 29" fill="none">
+                      <Path 
+                        d="M37.5396 12.3597C37.4864 15.1714 34.6336 15.2098 34.5924 15.2102L23.0205 15.0058C23.0309 15.0725 24.128 22.171 20.5511 25.7091C19.012 27.2312 15.1695 27.8461 11.2786 28.0514C5.24305 28.3697 0.476329 23.427 0.0332704 17.3819C-0.330988 12.4115 2.31851 7.70503 6.75148 5.44745L8.51303 4.55044C8.52372 4.54467 15.5805 0.734579 18.5292 0.0985724C19.7877 -0.172823 20.5207 0.154068 20.9475 0.617854C21.6605 1.39279 21.1543 2.55306 20.4572 3.34408L16.0274 8.37048L34.7008 9.40628C34.7064 9.40652 37.5932 9.53037 37.5396 12.3597Z" 
+                        fill={emotionColor}
+                      />
+                    </Svg>
+                    <View style={styles.likeTextContainer}>
+                      <Text style={[styles.likeCount, { color: emotionColor }]}>
+                        {selectedRecording.likes || 0}
+                      </Text>
+                      <Text style={[styles.likePlus, { color: emotionColor }]}>
+                        +
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              )}
+                );
+              })()}
             </View>
 
 
@@ -2024,14 +2042,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   likeCount: {
-    color: '#000000',
     fontSize: 40,
     fontWeight: '600',
     letterSpacing: 1.6,
     fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
   },
   likePlus: {
-    color: '#000000',
     fontSize: 40,
     fontWeight: '600',
     fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,

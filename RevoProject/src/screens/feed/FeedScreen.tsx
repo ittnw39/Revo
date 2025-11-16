@@ -21,7 +21,7 @@ import DeleteConfirmModal from '../../components/DeleteConfirmModal';
 import OverlayBackground from '../../components/OverlayBackground';
 
 import { useApp } from '../../contexts/AppContext';
-import { getRecordings, getRecording, deleteRecording, getUserFromStorage, Recording, getAudioUrl } from '../../services/api';
+import { getRecordings, getRecording, deleteRecording, getUserFromStorage, Recording, getAudioUrl, likeRecording, unlikeRecording } from '../../services/api';
 
 // 웹 환경에서 document 사용을 위한 타입 선언
 declare const document: {
@@ -48,6 +48,7 @@ const FeedScreen: FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [scrollY] = useState(new Animated.Value(0));
+  const [likedRecordings, setLikedRecordings] = useState<Set<number>>(new Set()); // 좋아요한 기록 ID 집합
   
   // 눈 애니메이션 상태 (1초마다 변경)
   const [eyeAnimationState, setEyeAnimationState] = useState<number>(0);
@@ -263,6 +264,47 @@ const FeedScreen: FC = () => {
       }
       audioRef.current = null;
       setIsPlaying(false);
+    }
+  };
+
+  // 좋아요 토글 핸들러
+  const handleLikeToggle = async () => {
+    if (!currentRecording || isMyRecording) return; // 내 기록은 좋아요 불가
+
+    const isLiked = likedRecordings.has(currentRecording.id);
+    
+    try {
+      let newLikes: number;
+      if (isLiked) {
+        // 좋아요 취소
+        const response = await unlikeRecording(currentRecording.id);
+        if (response.success) {
+          setLikedRecordings(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(currentRecording.id);
+            return newSet;
+          });
+          newLikes = response.likes;
+        } else {
+          return;
+        }
+      } else {
+        // 좋아요 추가
+        const response = await likeRecording(currentRecording.id);
+        if (response.success) {
+          setLikedRecordings(prev => new Set(prev).add(currentRecording.id));
+          newLikes = response.likes;
+        } else {
+          return;
+        }
+      }
+      
+      // 기록 목록의 좋아요 수 업데이트
+      setRecordings(prev => prev.map(rec => 
+        rec.id === currentRecording.id ? { ...rec, likes: newLikes } : rec
+      ));
+    } catch (error) {
+      console.error('좋아요 토글 오류:', error);
     }
   };
 
@@ -878,20 +920,54 @@ const FeedScreen: FC = () => {
               </View>
             )}
             {/* 좋아요 아이콘과 수 표시 - locationContainer 밖에, 키워드와 동일한 여백 */}
-            {currentRecording.district && (
-              <View style={[styles.likeContainer, { backgroundColor: getEmotionColor(currentRecording.emotion) }]}>
-                <Svg width="38" height="29" viewBox="0 0 38 29" fill="none">
-                  <Path 
-                    d="M37.5396 12.3597C37.4864 15.1714 34.6336 15.2098 34.5924 15.2102L23.0205 15.0058C23.0309 15.0725 24.128 22.171 20.5511 25.7091C19.012 27.2312 15.1695 27.8461 11.2786 28.0514C5.24305 28.3697 0.476329 23.427 0.0332704 17.3819C-0.330988 12.4115 2.31851 7.70503 6.75148 5.44745L8.51303 4.55044C8.52372 4.54467 15.5805 0.734579 18.5292 0.0985724C19.7877 -0.172823 20.5207 0.154068 20.9475 0.617854C21.6605 1.39279 21.1543 2.55306 20.4572 3.34408L16.0274 8.37048L34.7008 9.40628C34.7064 9.40652 37.5932 9.53037 37.5396 12.3597Z" 
-                    fill="#0A0A0A"
-                  />
-                </Svg>
-                <View style={styles.likeTextContainer}>
-                  <Text style={styles.likeCount}>{currentRecording.likes || 0}</Text>
-                  <Text style={styles.likePlus}>+</Text>
-                </View>
-              </View>
-            )}
+            {currentRecording.district && (() => {
+              const emotionColor = getEmotionColor(currentRecording.emotion);
+              const isLiked = likedRecordings.has(currentRecording.id);
+              const isMyRec = isMyRecording;
+              
+              // 내 기록이거나 좋아요를 누르지 않은 경우: 테두리 감정 색상, 배경 #0A0A0A, 텍스트 감정 색상
+              // 남의 기록이고 좋아요를 누른 경우: 배경 감정 색상, 텍스트 검정
+              const isFilled = !isMyRec && isLiked;
+              
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.likeContainer,
+                    isFilled
+                      ? { backgroundColor: emotionColor }
+                      : {
+                          backgroundColor: '#0A0A0A',
+                          borderWidth: 4,
+                          borderColor: emotionColor,
+                        },
+                  ]}
+                  onPress={handleLikeToggle}
+                  disabled={isMyRec}
+                  activeOpacity={isMyRec ? 1 : 0.7}
+                >
+                  <Svg width="38" height="29" viewBox="0 0 38 29" fill="none">
+                    <Path 
+                      d="M37.5396 12.3597C37.4864 15.1714 34.6336 15.2098 34.5924 15.2102L23.0205 15.0058C23.0309 15.0725 24.128 22.171 20.5511 25.7091C19.012 27.2312 15.1695 27.8461 11.2786 28.0514C5.24305 28.3697 0.476329 23.427 0.0332704 17.3819C-0.330988 12.4115 2.31851 7.70503 6.75148 5.44745L8.51303 4.55044C8.52372 4.54467 15.5805 0.734579 18.5292 0.0985724C19.7877 -0.172823 20.5207 0.154068 20.9475 0.617854C21.6605 1.39279 21.1543 2.55306 20.4572 3.34408L16.0274 8.37048L34.7008 9.40628C34.7064 9.40652 37.5932 9.53037 37.5396 12.3597Z" 
+                      fill={isFilled ? '#0A0A0A' : emotionColor}
+                    />
+                  </Svg>
+                  <View style={styles.likeTextContainer}>
+                    <Text style={[
+                      styles.likeCount,
+                      { color: isFilled ? '#000000' : emotionColor }
+                    ]}>
+                      {currentRecording.likes || 0}
+                    </Text>
+                    <Text style={[
+                      styles.likePlus,
+                      { color: isFilled ? '#000000' : emotionColor }
+                    ]}>
+                      +
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })()}
       </View>
 
           {/* 하단 버튼 영역 */}
@@ -1109,14 +1185,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   likeCount: {
-    color: '#000000',
     fontSize: 40,
     fontWeight: '600',
     letterSpacing: 1.6,
     fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
   },
   likePlus: {
-    color: '#000000',
     fontSize: 40,
     fontWeight: '600',
     fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
