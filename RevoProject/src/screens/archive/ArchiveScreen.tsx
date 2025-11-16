@@ -318,7 +318,7 @@ const ArchiveScreen: FC = () => {
         style={styles.contentContainer}
         onTouchStart={handleTouchStart}
       >
-        {/* 월별/전체 탭 버튼 */}
+        {/* 월별/전체 탭 버튼 (세부 페이지처럼 절대 위치) */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabButton, viewMode === 'monthly' && styles.tabButtonActive]}
@@ -734,13 +734,16 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    paddingTop: 118, // 헤더 아래부터 시작
     alignItems: 'center',
   },
   tabContainer: {
+    position: 'absolute',
+    top: 118, // 헤더 아래 (세부 페이지와 동일)
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    marginTop: 0,
-    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tabButton: {
     paddingHorizontal: 32,
