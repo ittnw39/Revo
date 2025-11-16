@@ -19,6 +19,7 @@ import PageIndicator from '../../components/PageIndicator';
 import ToggleButton from '../../components/ToggleButton';
 
 import { useApp } from '../../contexts/AppContext';
+import { getUser, getUserFromStorage, User } from '../../services/api';
 
 // 웹 환경에서 document 사용을 위한 타입 선언
 declare const document: {
@@ -76,7 +77,75 @@ const SettingsScreen: FC = () => {
   const [selectedDays, setSelectedDays] = useState<string[]>([]); // 선택된 요일들
   const [showFriendManagement, setShowFriendManagement] = useState(false); // 친구 관리 화면 표시 여부
   const [friendManagementTitle, setFriendManagementTitle] = useState(''); // 친구 관리 화면 제목
+  const [friendPageIndex, setFriendPageIndex] = useState(0); // 친구 관리 화면 페이지 인덱스
+  const [userName, setUserName] = useState<string>(''); // 사용자 닉네임
+  const [userCreatedAt, setUserCreatedAt] = useState<string>(''); // 사용자 생성 날짜
   
+  // 디데이 계산 함수 (한국 시간 기준)
+  const calculateDaysSinceCreation = (createdAt: string): string => {
+    try {
+      // 백엔드에서 받은 ISO 문자열을 Date 객체로 변환 (시간대 정보 포함)
+      const createdDate = new Date(createdAt);
+      
+      // 한국 시간 기준 오늘 날짜 계산 (UTC+9)
+      const now = new Date();
+      const kstOffset = 9 * 60; // 한국 시간대 오프셋 (분 단위)
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const kstNow = new Date(utc + (kstOffset * 60000));
+      
+      // 날짜만 비교하기 위해 시간을 0으로 설정
+      const today = new Date(kstNow);
+      today.setHours(0, 0, 0, 0);
+      
+      const createdDateOnly = new Date(createdDate);
+      createdDateOnly.setHours(0, 0, 0, 0);
+      
+      const diffTime = today.getTime() - createdDateOnly.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      return `D+${diffDays}`;
+    } catch (error) {
+      console.error('디데이 계산 오류:', error);
+      return 'D+0';
+    }
+  };
+
+  // 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const userInfo = getUserFromStorage();
+        if (userInfo) {
+          setUserName(userInfo.name);
+          
+          // API에서 최신 사용자 정보 가져오기 (created_at 포함)
+          try {
+            const response = await getUser(userInfo.id);
+            if (response.success && response.user) {
+              setUserName(response.user.name);
+              setUserCreatedAt(response.user.created_at);
+            }
+          } catch (error) {
+            console.log('API에서 사용자 정보 가져오기 실패, 로컬 스토리지 확인:', error);
+            // 로컬 스토리지에서 created_at 확인
+            if (typeof window !== 'undefined' && window.localStorage) {
+              const storedCreatedAt = window.localStorage.getItem('userCreatedAt');
+              if (storedCreatedAt) {
+                setUserCreatedAt(storedCreatedAt);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('사용자 정보 로드 오류:', error);
+      }
+    };
+    
+    if (isOnboardingCompleted) {
+      loadUserInfo();
+    }
+  }, [isOnboardingCompleted]);
+
   // 온보딩 완료 상태 확인
   useEffect(() => {
     if (!isOnboardingCompleted) {
@@ -108,6 +177,7 @@ const SettingsScreen: FC = () => {
       setShowDaySelector(false);
     } else if (settingsView === 'friends') {
       setShowFriendManagement(false);
+      setFriendPageIndex(0);
     } else if (settingsView === 'main') {
       // 메인으로 돌아갈 때 모든 step 초기화
       setAccessibilityStep(0);
@@ -321,8 +391,12 @@ const SettingsScreen: FC = () => {
         <>
           {/* 사용자 정보 */}
           <View style={styles.userInfoContainer}>
-            <Text style={styles.userInfoText}>D+197</Text>
-            <Text style={styles.userInfoSubText}>홍시천사 여행자</Text>
+            <Text style={styles.userInfoText}>
+              {userCreatedAt ? calculateDaysSinceCreation(userCreatedAt) : 'D+0'}
+            </Text>
+            <Text style={styles.userInfoSubText}>
+              {userName ? `${userName} 여행자` : '사용자'}
+            </Text>
           </View>
 
           {/* 설정 메뉴 리스트 */}
@@ -491,7 +565,8 @@ const SettingsScreen: FC = () => {
           {!showGestureMenu && (
             <PageIndicator 
               currentPage={accessibilityStep} 
-              totalPages={5} 
+              totalPages={5}
+              onPageChange={setAccessibilityStep}
             />
           )}
         </>
@@ -536,7 +611,8 @@ const SettingsScreen: FC = () => {
           {/* 페이지바 */}
           <PageIndicator 
             currentPage={privacyStep} 
-            totalPages={2} 
+            totalPages={2}
+            onPageChange={setPrivacyStep}
           />
         </>
       ) : settingsView === 'notifications' ? (
@@ -589,7 +665,8 @@ const SettingsScreen: FC = () => {
           {!showDaySelector && (
             <PageIndicator 
               currentPage={notificationStep} 
-              totalPages={2} 
+              totalPages={2}
+              onPageChange={setNotificationStep}
             />
           )}
         </>
@@ -648,13 +725,13 @@ const SettingsScreen: FC = () => {
                   contentContainerStyle={styles.friendGridContent}
                 >
                   {/* 친구 카드들 - 2열 그리드 */}
-                  {[2, 1, 3, 4].map((friendId, index) => (
+                  {[0, 1, 2, 3].map((friendId, index) => (
                     <View key={friendId} style={[
                       styles.friendCard,
                       index % 2 === 0 ? styles.friendCardLeft : styles.friendCardRight
                     ]}>
                       {/* 프로필 이미지 영역 */}
-                      {friendId === 2 ? (
+                      {friendId === 0 ? (
                         <View style={styles.addFriendIconContainer}>
                           <Text style={styles.addFriendText}>+</Text>
                         </View>
@@ -669,7 +746,7 @@ const SettingsScreen: FC = () => {
                       )}
                       
                       {/* 친구 이름 */}
-                      {friendId !== 2 && (
+                      {friendId !== 0 && (
                         <View style={styles.friendCardContent}>
                           <Text style={styles.friendCardName}>친구 {friendId}</Text>
                           <TouchableOpacity style={styles.blockButton}>
@@ -681,10 +758,11 @@ const SettingsScreen: FC = () => {
                   ))}
                 </ScrollView>
 
-                {/* 페이지바 - 1페이지로 고정 */}
+                {/* 페이지바 - 3페이지로 표시 */}
                 <PageIndicator 
-                  currentPage={0} 
-                  totalPages={1} 
+                  currentPage={friendPageIndex} 
+                  totalPages={3}
+                  onPageChange={setFriendPageIndex}
                 />
               </View>
             </>
@@ -1471,7 +1549,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   friendCard: {
-    width: 168,
+    width: 166,
     height: 250,
     backgroundColor: '#3A3A3A',
     borderRadius: 20,
@@ -1486,7 +1564,7 @@ const styles = StyleSheet.create({
   },
   friendCardImageContainer: {
     position: 'absolute',
-    left: 35,
+    left: 33,
     top: 24,
     width: 99,
     height: 99,
@@ -1545,6 +1623,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
     letterSpacing: 0.48,
+    paddingBottom: 2,
   },
 });
 

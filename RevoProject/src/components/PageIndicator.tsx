@@ -1,65 +1,28 @@
 import { FC } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 
 interface PageIndicatorProps {
   currentPage: number;
   totalPages: number;
   bottom?: number;
+  onPageChange?: (page: number) => void;
 }
 
 const screenWidth = Dimensions.get('window').width;
 
-const PageIndicator: FC<PageIndicatorProps> = ({ currentPage, totalPages, bottom = 92 }) => {
-  // 접근성 설정 (5개 페이지) 특별 스타일
-  if (totalPages === 5) {
-    // 모든 점은 원(14px)
-    // 현재 페이지: #CECECE
-    // 아닌 페이지: #2C2C2C
-    // 간격: 모두 30px
-    const dotWidth = 14;
-    const gap = 14;
-    const totalWidth = dotWidth * 5 + gap * 4; // 14*5 + 30*4 = 70 + 120 = 190px
-
-    return (
-      <View 
-        style={[
-          styles.pageIndicator,
-          { 
-            bottom,
-            width: totalWidth,
-            left: (screenWidth - totalWidth) / 2,
-          }
-        ]}
-      >
-        {Array.from({ length: 5 }, (_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.newPageDot,
-              {
-                backgroundColor: index === currentPage ? '#CECECE' : '#2C2C2C',
-                marginLeft: index === 0 ? 0 : gap,
-              }
-            ]}
-          />
-        ))}
-      </View>
-    );
-  }
-
-  // 일반 스타일 (1개, 2개, 3개, 4개 페이지)
+const PageIndicator: FC<PageIndicatorProps> = ({ currentPage, totalPages, bottom = 92, onPageChange }) => {
+  // 모든 페이지 수에서 동일한 간격 사용 (내기록 화면과 동일)
   // 모든 점은 원(14px)
   // 현재 페이지: #CECECE
   // 아닌 페이지: #2C2C2C
-  // 간격: 22px (첫 번째와 두 번째 사이), 나머지는 30px
+  // 간격: 모두 15px (내기록 화면과 동일)
   const dotWidth = 14;
-  const firstGap = 22; // 첫 번째와 두 번째 사이
-  const defaultGap = 30; // 나머지 간격
+  const gap = 15; // 내기록 화면과 동일한 간격
 
-  // 전체 너비 계산 - 모든 점이 원이므로
+  // 전체 너비 계산
   let totalWidth = dotWidth * totalPages; // 모든 점의 너비
   if (totalPages > 1) {
-    totalWidth += firstGap + defaultGap * (totalPages - 2); // 간격들
+    totalWidth += gap * (totalPages - 1); // 간격들
   }
 
   return (
@@ -73,31 +36,27 @@ const PageIndicator: FC<PageIndicatorProps> = ({ currentPage, totalPages, bottom
         }
       ]}
     >
-      {Array.from({ length: totalPages }, (_, index) => {
-        const isFirst = index === 0;
-        const isActive = index === currentPage;
-        
-        // 모든 점은 원(circle)
-        // 현재 페이지: #CECECE
-        // 아닌 페이지: #2C2C2C
-        // 첫 번째 점은 marginLeft 없음
-        // 두 번째 점은 firstGap (22px)
-        // 나머지는 defaultGap (30px)
-        const marginLeft = isFirst ? 0 : (index === 1 ? firstGap : defaultGap);
-        
-        return (
+      {Array.from({ length: totalPages }, (_, index) => (
+        <TouchableOpacity
+          key={index}
+          onPress={() => onPageChange && onPageChange(index)}
+          style={[
+            styles.pageIndicatorTouchable,
+            {
+              marginLeft: index === 0 ? 0 : gap,
+            }
+          ]}
+        >
           <View
-            key={index}
             style={[
               styles.newPageDot,
-              { 
-                backgroundColor: isActive ? '#CECECE' : '#2C2C2C',
-                marginLeft: marginLeft,
+              {
+                backgroundColor: index === currentPage ? '#CECECE' : '#2C2C2C',
               }
             ]}
           />
-        );
-      })}
+        </TouchableOpacity>
+      ))}
     </View>
   );
 };
@@ -106,6 +65,12 @@ const styles = StyleSheet.create({
   pageIndicator: {
     position: 'absolute',
     flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pageIndicatorTouchable: {
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   newPageDot: {

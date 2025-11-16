@@ -25,6 +25,12 @@ import NavigationBar from '../../components/NavigationBar';
 import Header from '../../components/Header';
 import { getRecordings, getUserFromStorage, Recording } from '../../services/api';
 
+// API URL 가져오기 (웹 환경에서만 사용)
+const getApiUrl = () => {
+  // @ts-ignore
+  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+};
+
 // iPhone 15, 15 Pro 크기 기준
 const screenWidth = 390;
 const screenHeight = 844;
@@ -38,6 +44,9 @@ const ArchiveScreen: FC = () => {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(0); // 페이지 인덱스 (0, 1, 2)
+  
+  // 웨이브 애니메이션을 위한 offset 값
+  const [waveOffset, setWaveOffset] = useState<number>(0);
 
   // 현재 월 계산
   const currentMonth = useMemo(() => {
@@ -94,13 +103,92 @@ const ArchiveScreen: FC = () => {
     return recordings;
   }, [recordings, viewMode]);
 
-  // 총 녹음 시간 계산 (분 단위)
-  // 실제로는 audio_file의 duration을 사용해야 하지만, 현재는 기록 개수로 임시 계산
-  // TODO: 실제 오디오 파일 duration 정보를 사용하도록 수정 필요
-  const totalMinutes = useMemo(() => {
-    // 임시로 기록 개수 * 평균 1분으로 계산 (실제로는 오디오 파일 duration 합계 사용)
-    return filteredRecordings.length; // 임시: 기록 개수 = 분
+  // 총 녹음 시간 계산 (초 단위)
+  const [totalDuration, setTotalDuration] = useState<number>(0);
+
+  useEffect(() => {
+    const calculateTotalDuration = async () => {
+      // 웹 환경에서만 Audio API 사용 가능
+      if (Platform.OS !== 'web') {
+        setTotalDuration(0);
+        return;
+      }
+
+      let totalSeconds = 0;
+      
+      for (const recording of filteredRecordings) {
+        try {
+          const audioUrl = recording.audio_url || `/api/audio/${recording.audio_file}`;
+          const apiUrl = getApiUrl();
+          const fullUrl = audioUrl.startsWith('http') ? audioUrl : `${apiUrl.replace('/api', '')}${audioUrl}`;
+          
+          // 오디오 파일의 duration 가져오기
+          const audio = new (window as any).Audio(fullUrl);
+          await new Promise<void>((resolve) => {
+            audio.addEventListener('loadedmetadata', () => {
+              totalSeconds += audio.duration;
+              resolve();
+            });
+            audio.addEventListener('error', () => {
+              // 오류 발생 시 무시하고 계속 진행
+              resolve();
+            });
+            audio.load();
+          });
+        } catch (error) {
+          console.error(`오디오 duration 계산 오류 (recording ${recording.id}):`, error);
+        }
+      }
+      
+      setTotalDuration(totalSeconds);
+    };
+
+    if (filteredRecordings.length > 0) {
+      calculateTotalDuration();
+    } else {
+      setTotalDuration(0);
+    }
   }, [filteredRecordings]);
+
+  // 총 시간을 분 또는 초로 변환
+  const totalTimeDisplay = useMemo(() => {
+    const totalSeconds = Math.floor(totalDuration);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes >= 1) {
+      return `${minutes}분`;
+    } else {
+      return `${seconds}초`;
+    }
+  }, [totalDuration]);
+
+  // 웨이브 애니메이션 시작
+  useEffect(() => {
+    if (currentPageIndex === 0) {
+      const interval = setInterval(() => {
+        setWaveOffset(prev => (prev + 2) % 120); // 0~119 사이클, 2배 빠르게
+      }, 33); // 약 30fps (1000/30 ≈ 33ms)
+      return () => clearInterval(interval);
+    }
+  }, [currentPageIndex]);
+
+  // 웨이브 경로 생성 함수 (물결 높이 10px, 폭 60px - 두배)
+  const createWavePath = (y: number, offset: number = 0): string => {
+    const width = 393;
+    const amplitude = 10; // 물결 높이
+    const wavelength = 60; // 물결 하나의 폭 (두배)
+    const points: string[] = [];
+    
+    for (let x = 0; x <= width; x += 2) {
+      const waveX = (x + offset) % (wavelength * 2);
+      const normalizedX = (waveX / (wavelength * 2)) * Math.PI * 2;
+      const waveY = y + Math.sin(normalizedX) * amplitude;
+      points.push(`${x},${waveY}`);
+    }
+    
+    return `M ${points.join(' L ')}`;
+  };
 
   // 위치별 기록 통계 계산 (상위 4개)
   const topLocations = useMemo(() => {
@@ -141,7 +229,7 @@ const ArchiveScreen: FC = () => {
     if (currentPageIndex === 0) {
       return {
         question: `${currentMonth}월에는 얼마나\n기록을 남겼을까요?`,
-        answer: `${totalMinutes}분\n남겼어요`,
+        answer: `${totalTimeDisplay}\n남겼어요`,
       };
     } else if (currentPageIndex === 1) {
       return {
@@ -154,9 +242,9 @@ const ArchiveScreen: FC = () => {
     }
     return {
       question: `${currentMonth}월에는 얼마나\n기록을 남겼을까요?`,
-      answer: `${totalMinutes}분\n남겼어요`,
+      answer: `${totalTimeDisplay}\n남겼어요`,
     };
-  }, [currentMonth, totalMinutes, currentPageIndex]);
+  }, [currentMonth, totalTimeDisplay, currentPageIndex]);
 
   // 좌우 스와이프 제스처 처리 (RecordsScreen 참고)
   const handleTouchStart = (e: any) => {
@@ -263,49 +351,44 @@ const ArchiveScreen: FC = () => {
               <Text style={styles.answerText}>{displayData.answer}</Text>
             </View>
 
-            {/* 파도 배경 이미지 */}
-            <View style={styles.waveContainer}>
-              {/* 파도 SVG - 5개의 곡선 파도 */}
-              <Svg width="393" height="200" viewBox="0 0 393 200" style={styles.waveSvg}>
-                {/* 파도 1 - 곡선 형태 */}
+            {/* 애니메이션 선들 */}
+            <View style={styles.animationContainer}>
+              <Svg width="393" height="90" viewBox="0 0 393 90" style={styles.animationSvg}>
+                {/* 5개의 웨이브 선, 각각 15px 간격 */}
                 <Path
-                  d="M-124 41 Q100 35, 300 41 T724 41 T1148 41 T1572 41 T1720 41"
+                  d={createWavePath(2.5, waveOffset)}
                   stroke="#B780FF"
-                  strokeWidth="2"
-                  strokeLinecap="round"
+                  strokeWidth="5"
                   fill="none"
+                  strokeLinecap="round"
                 />
-                {/* 파도 2 */}
                 <Path
-                  d="M-124 59 Q100 53, 300 59 T724 59 T1148 59 T1572 59 T1720 59"
+                  d={createWavePath(22.5, waveOffset)}
                   stroke="#B780FF"
-                  strokeWidth="2"
-                  strokeLinecap="round"
+                  strokeWidth="5"
                   fill="none"
+                  strokeLinecap="round"
                 />
-                {/* 파도 3 */}
                 <Path
-                  d="M-124 77 Q100 71, 300 77 T724 77 T1148 77 T1572 77 T1720 77"
+                  d={createWavePath(42.5, waveOffset)}
                   stroke="#B780FF"
-                  strokeWidth="2"
-                  strokeLinecap="round"
+                  strokeWidth="5"
                   fill="none"
+                  strokeLinecap="round"
                 />
-                {/* 파도 4 */}
                 <Path
-                  d="M-124 95 Q100 89, 300 95 T724 95 T1148 95 T1572 95 T1720 95"
+                  d={createWavePath(62.5, waveOffset)}
                   stroke="#B780FF"
-                  strokeWidth="2"
-                  strokeLinecap="round"
+                  strokeWidth="5"
                   fill="none"
+                  strokeLinecap="round"
                 />
-                {/* 파도 5 */}
                 <Path
-                  d="M-124 113 Q100 107, 300 113 T724 113 T1148 113 T1572 113 T1720 113"
+                  d={createWavePath(82.5, waveOffset)}
                   stroke="#B780FF"
-                  strokeWidth="2"
-                  strokeLinecap="round"
+                  strokeWidth="5"
                   fill="none"
+                  strokeLinecap="round"
                 />
               </Svg>
             </View>
@@ -701,15 +784,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
   },
-  waveContainer: {
+  animationContainer: {
     position: 'absolute',
-    bottom: 200, // 네비게이션 바 위쪽
+    top: 490, // 상단에서 470px
     left: 0,
     right: 0,
-    height: 200,
-    overflow: 'hidden',
+    height: 150, // 5px 선 5개 + 15px 간격 4개 = 25px + 60px = 85px (여유를 두어 90px)
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  waveSvg: {
+  animationSvg: {
     width: '100%',
     height: '100%',
   },
