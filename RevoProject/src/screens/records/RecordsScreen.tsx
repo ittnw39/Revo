@@ -2031,7 +2031,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10, // 키워드와 동일한 여백
-    paddingVertical: 4,
+    // paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 10,
     gap: 8,
