@@ -8,6 +8,7 @@ import {
   StatusBar,
   ScrollView,
   Image,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
@@ -75,6 +76,9 @@ const SettingsScreen: FC = () => {
   const [recordNotifications, setRecordNotifications] = useState(false); // 기록 알림 설정
   const [showDaySelector, setShowDaySelector] = useState(false); // 요일 선택기 표시 여부
   const [selectedDays, setSelectedDays] = useState<string[]>([]); // 선택된 요일들
+  const [showTimeSelector, setShowTimeSelector] = useState(false); // 시간 설정 화면 표시 여부
+  const [selectedDayForTime, setSelectedDayForTime] = useState<string>(''); // 시간 설정을 위해 선택된 요일
+  const [selectedTime, setSelectedTime] = useState<{ hour: number; minute: number }>({ hour: 18, minute: 10 }); // 선택된 시간 (기본값 18:10)
   const [showFriendManagement, setShowFriendManagement] = useState(false); // 친구 관리 화면 표시 여부
   const [friendManagementTitle, setFriendManagementTitle] = useState(''); // 친구 관리 화면 제목
   const [friendPageIndex, setFriendPageIndex] = useState(0); // 친구 관리 화면 페이지 인덱스
@@ -163,6 +167,7 @@ const SettingsScreen: FC = () => {
     setShowGestureMenu(false);
     setShowDaySelector(false);
     setShowFriendManagement(false);
+    setShowTimeSelector(false);
   }, []);
 
   // settingsView가 변경될 때 해당 step을 0으로 초기화
@@ -175,6 +180,7 @@ const SettingsScreen: FC = () => {
     } else if (settingsView === 'notifications') {
       setNotificationStep(0);
       setShowDaySelector(false);
+      setShowTimeSelector(false);
     } else if (settingsView === 'friends') {
       setShowFriendManagement(false);
       setFriendPageIndex(0);
@@ -186,6 +192,7 @@ const SettingsScreen: FC = () => {
       setShowGestureMenu(false);
       setShowDaySelector(false);
       setShowFriendManagement(false);
+      setShowTimeSelector(false);
     }
   }, [settingsView]);
   
@@ -309,7 +316,10 @@ const SettingsScreen: FC = () => {
           <TouchableOpacity 
             style={styles.backButton}
             onPress={() => {
-              if (showDaySelector) {
+              if (showTimeSelector) {
+                setShowTimeSelector(false);
+                setSelectedDayForTime('');
+              } else if (showDaySelector) {
                 setShowDaySelector(false);
               } else {
                 setSettingsView('main');
@@ -321,7 +331,7 @@ const SettingsScreen: FC = () => {
             </svg>
           </TouchableOpacity>
           <Text style={styles.accessibilityTitle}>
-            알림/리마인더
+            {showTimeSelector ? '알림/리마인더' : '알림/리마인더'}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -802,18 +812,15 @@ const SettingsScreen: FC = () => {
       ) : null}
 
       {/* 요일 선택기 - 알림 컨테이너 밖으로 이동 */}
-      {settingsView === 'notifications' && notificationStep === 1 && showDaySelector && (
+      {settingsView === 'notifications' && notificationStep === 1 && showDaySelector && !showTimeSelector && (
         <View style={styles.daySelectorContainer}>
           {['일', '월', '화', '수', '목', '금', '토'].map((day, index) => (
             <TouchableOpacity
               key={day}
               style={styles.daySelectorItem}
               onPress={() => {
-                if (selectedDays.includes(day)) {
-                  setSelectedDays(selectedDays.filter(d => d !== day));
-                } else {
-                  setSelectedDays([...selectedDays, day]);
-                }
+                setSelectedDayForTime(day);
+                setShowTimeSelector(true);
               }}
             >
               <Text style={styles.daySelectorText}>{day}</Text>
@@ -826,6 +833,67 @@ const SettingsScreen: FC = () => {
               </View>
             </TouchableOpacity>
           ))}
+        </View>
+      )}
+
+      {/* 시간 설정 화면 */}
+      {settingsView === 'notifications' && notificationStep === 1 && showTimeSelector && (
+        <View style={styles.timeSelectorContainer}>
+          <Text style={styles.timeSelectorTitle}>알림 시간</Text>
+          
+          {/* 시간 표시 - 큰 숫자로 표시 */}
+          <View style={styles.timeDisplayContainer}>
+            <TouchableOpacity
+              onPress={() => {
+                // 시간 증가
+                setSelectedTime({ 
+                  ...selectedTime, 
+                  hour: (selectedTime.hour + 1) % 24 
+                });
+              }}
+              onLongPress={() => {
+                // 시간 감소
+                setSelectedTime({ 
+                  ...selectedTime, 
+                  hour: (selectedTime.hour - 1 + 24) % 24 
+                });
+              }}
+            >
+              <Text style={styles.timeHourText}>{String(selectedTime.hour).padStart(2, '0')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.timeColonText}>:</Text>
+            <TouchableOpacity
+              onPress={() => {
+                // 분 증가
+                setSelectedTime({ 
+                  ...selectedTime, 
+                  minute: (selectedTime.minute + 1) % 60 
+                });
+              }}
+              onLongPress={() => {
+                // 분 감소
+                setSelectedTime({ 
+                  ...selectedTime, 
+                  minute: (selectedTime.minute - 1 + 60) % 60 
+                });
+              }}
+            >
+              <Text style={styles.timeMinuteText}>{String(selectedTime.minute).padStart(2, '0')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 확인 버튼 */}
+          <TouchableOpacity
+            style={styles.timeConfirmButton}
+            onPress={() => {
+              // 시간 저장 로직 (나중에 구현)
+              console.log(`${selectedDayForTime}요일 알림 시간: ${String(selectedTime.hour).padStart(2, '0')}:${String(selectedTime.minute).padStart(2, '0')}`);
+              setShowTimeSelector(false);
+              setSelectedDayForTime('');
+            }}
+          >
+            <Text style={styles.timeConfirmButtonText}>확인</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -1428,6 +1496,85 @@ const styles = StyleSheet.create({
   daySelectorIconRotate: {
     width: 15,
     height: 28,
+  },
+  // 시간 설정 화면 스타일
+  timeSelectorContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 198,
+    bottom: 0,
+    backgroundColor: '#0A0A0A',
+  },
+  timeSelectorTitle: {
+    position: 'absolute',
+    left: '50%',
+    top: 117, // 315 - 198 = 117
+    transform: [{ translateX: -53.5 }], // 중앙 정렬
+    color: '#F5F5F5',
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: 0.56,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  timeDisplayContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 161, // 359 - 198 = 161
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeHourText: {
+    color: '#F5F5F5',
+    fontSize: 100,
+    fontWeight: '700',
+    letterSpacing: 0,
+    marginRight: 11, // 콜론과의 간격
+    minWidth: 107, // 숫자 두 자리 너비
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  timeColonText: {
+    color: '#F5F5F5',
+    fontSize: 80,
+    fontWeight: '700',
+    letterSpacing: 0,
+    marginHorizontal: 0,
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  timeMinuteText: {
+    color: '#F5F5F5',
+    fontSize: 100,
+    fontWeight: '700',
+    letterSpacing: 0,
+    marginLeft: 11, // 콜론과의 간격
+    minWidth: 107, // 숫자 두 자리 너비
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+  },
+  timeConfirmButton: {
+    position: 'absolute',
+    left: 147,
+    bottom: 122,
+    width: 99,
+    height: 50,
+    backgroundColor: '#B780FF',
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  timeConfirmButtonText: {
+    color: '#0A0A0A',
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 0.44,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
   },
   // 기타 화면 스타일
   etcCard: {
