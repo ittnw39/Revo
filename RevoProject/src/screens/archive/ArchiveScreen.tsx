@@ -554,7 +554,8 @@ const ArchiveScreen: FC = () => {
                       {/* 감정 SVG */}
                       <View style={[
                         styles.emotionCardIcon,
-                        emotion.emotion === '신남' && styles.emotionCardIconOverflowVisible
+                        emotion.emotion === '신남' && styles.emotionCardIconOverflowVisible,
+                        emotion.emotion === '보통' && styles.emotionCardIconNormal
                       ]}>
                         {emotion.emotion === '행복' || emotion.emotion === '기쁨' ? (
                           <Svg width="75" height="71" viewBox="0 0 75 71" fill="none">
@@ -1068,6 +1069,9 @@ const styles = StyleSheet.create({
     width: 108, // SVG 실제 크기에 맞춤
     height: 75,
     marginTop: -5, // 위로 3px 이동
+  },
+  emotionCardIconNormal: {
+    left: -7,
   },
   emotionCardImage: {
     width: 75,
