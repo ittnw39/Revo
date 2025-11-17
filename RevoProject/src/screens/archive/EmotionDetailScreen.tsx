@@ -119,6 +119,17 @@ const WaveCircle = memo<WaveCircleProps>(({
   getEmotionWaveColors,
   waveHeights
 }) => {
+  // 마운트/언마운트 확인
+  useEffect(() => {
+    console.log(`WaveCircle MOUNTED - ID: ${recording.id}, position: ${position}`);
+    return () => {
+      console.log(`WaveCircle UNMOUNTED - ID: ${recording.id}, position: ${position}`);
+    };
+  }, []);
+
+  // 리렌더링 확인
+  console.log(`WaveCircle RENDER - ID: ${recording.id}, position: ${position}, index: ${index}`);
+  
   // 초기 오프셋만 계산 (애니메이션은 부모에서 통합 관리)
   const initialOffset = recording.id ? (recording.id % 60) * 4 : 0;
   
@@ -244,12 +255,21 @@ const createWaveFillPath = (y: number, offset: number = 0, width: number = 400, 
 };
 
 const EmotionDetailScreen: FC = () => {
+  console.log('=== EmotionDetailScreen RENDER ===');
+  
   const navigation = useNavigation<EmotionDetailScreenNavigationProp>();
   const route = useRoute<EmotionDetailScreenRouteProp>();
   const { isOnboardingCompleted } = useApp();
   
   const emotion = route.params?.emotion || '';
   const viewMode = route.params?.viewMode || 'monthly';
+  
+  useEffect(() => {
+    console.log('=== EmotionDetailScreen MOUNTED ===', { emotion, viewMode });
+    return () => {
+      console.log('=== EmotionDetailScreen UNMOUNTED ===');
+    };
+  }, []);
   
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -261,6 +281,7 @@ const EmotionDetailScreen: FC = () => {
   // 전역 웨이브 애니메이션 (모든 원을 한번에 업데이트)
   const globalWaveOffsetRef = useRef<number>(0);
   const animationFrameIdRef = useRef<number | null>(null);
+  const isAnimationRunningRef = useRef<boolean>(false);
   
   // 현재 슬라이드의 recording ID들을 ref로 저장 (리렌더링 방지)
   const currentRecordingsRef = useRef<{ prev: number | null; current: number | null; next: number | null }>({
@@ -352,7 +373,17 @@ const EmotionDetailScreen: FC = () => {
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     
+    // 이미 애니메이션이 실행 중이면 중복 실행 방지
+    if (isAnimationRunningRef.current) {
+      console.warn('Animation already running, skipping...');
+      return;
+    }
+    
+    console.log('Animation useEffect STARTED');
+    isAnimationRunningRef.current = true;
     let lastTime = Date.now();
+    let frameCount = 0;
+    let consecutiveEmptyFrames = 0;
     
     const animate = () => {
       const currentTime = Date.now();
@@ -368,14 +399,45 @@ const EmotionDetailScreen: FC = () => {
         currentRecordingsRef.current.next,
       ].filter((id): id is number => id !== null);
       
+      // recordingIds가 비어있으면 건너뛰기 (DOM이 아직 준비되지 않음)
+      if (recordingIds.length === 0) {
+        consecutiveEmptyFrames++;
+        // 60프레임(약 1초) 이상 비어있으면 경고
+        if (consecutiveEmptyFrames === 60) {
+          console.warn('Animation: recordingIds is empty for 60 frames, waiting for DOM...');
+        }
+        lastTime = currentTime;
+        frameCount++;
+        animationFrameIdRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      
+      // recordingIds가 준비되면 consecutiveEmptyFrames 리셋
+      if (consecutiveEmptyFrames > 0) {
+        console.log(`Animation: recordingIds ready after ${consecutiveEmptyFrames} empty frames`);
+        consecutiveEmptyFrames = 0;
+      }
+      
+      // 60프레임마다 로그 (약 1초마다)
+      if (frameCount % 60 === 0) {
+        console.log(`Animation frame ${frameCount}, offset: ${globalWaveOffsetRef.current.toFixed(2)}, recordingIds:`, recordingIds);
+      }
+      
+      let foundCount = 0;
+      let notFoundCount = 0;
+      
       recordingIds.forEach((recId) => {
         const wavePathElement = (document as any).getElementById(`wave-path-${recId}`);
         const waveFillElement = (document as any).getElementById(`wave-fill-${recId}`);
         
         if (wavePathElement && waveFillElement) {
+          foundCount++;
           // recording 정보는 ref에서 찾기 (리렌더링 방지)
           const rec = emotionRecordingsRef.current.find(r => r.id === recId);
-          if (!rec) return;
+          if (!rec) {
+            notFoundCount++;
+            return;
+          }
           
           const emotionColor = getEmotionColor(rec.emotion || '');
           const viewBoxSize = 400;
@@ -400,16 +462,31 @@ const EmotionDetailScreen: FC = () => {
           
           wavePathElement.setAttribute('d', wavePath);
           waveFillElement.setAttribute('d', waveFillPath);
+        } else {
+          notFoundCount++;
+          if (frameCount % 60 === 0) {
+            console.warn(`DOM elements not found for recording ${recId}:`, {
+              wavePath: !!wavePathElement,
+              waveFill: !!waveFillElement
+            });
+          }
         }
       });
       
+      if (frameCount % 60 === 0 && notFoundCount > 0) {
+        console.warn(`Found: ${foundCount}, Not found: ${notFoundCount}`);
+      }
+      
       lastTime = currentTime;
+      frameCount++;
       animationFrameIdRef.current = requestAnimationFrame(animate);
     };
     
     animationFrameIdRef.current = requestAnimationFrame(animate);
     
     return () => {
+      console.log('Animation useEffect CLEANUP');
+      isAnimationRunningRef.current = false;
       if (animationFrameIdRef.current !== null) {
         cancelAnimationFrame(animationFrameIdRef.current);
         animationFrameIdRef.current = null;
