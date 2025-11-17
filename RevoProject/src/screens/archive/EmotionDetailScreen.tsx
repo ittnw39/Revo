@@ -46,6 +46,59 @@ const getEmotionColor = (emotion: string): string => {
   return emotionColorMap[emotion] || '#FED046';
 };
 
+// HEX 색상을 RGB로 변환 (컴포넌트 외부로 이동 - 함수 참조 안정화)
+const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : { r: 0, g: 0, b: 0 };
+};
+
+// RGB를 HEX로 변환 (컴포넌트 외부로 이동 - 함수 참조 안정화)
+const rgbToHex = (r: number, g: number, b: number): string => {
+  return `#${[r, g, b].map(x => {
+    const hex = Math.round(x).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('')}`;
+};
+
+// 색상과 그레이를 블렌딩하는 함수 (grayPercent: 0~1) (컴포넌트 외부로 이동 - 함수 참조 안정화)
+const blendWithGray = (color: string, grayPercent: number): string => {
+  const rgb = hexToRgb(color);
+  const grayValue = 128; // 중간 그레이 (50%)
+  
+  const blendedR = rgb.r * (1 - grayPercent) + grayValue * grayPercent;
+  const blendedG = rgb.g * (1 - grayPercent) + grayValue * grayPercent;
+  const blendedB = rgb.b * (1 - grayPercent) + grayValue * grayPercent;
+  
+  return rgbToHex(blendedR, blendedG, blendedB);
+};
+
+// 행복 감정의 물결 색상 배열 (4개 이상이면 4개 색상 순환) (컴포넌트 외부로 이동 - 함수 참조 안정화)
+const getHappyWaveColor = (index: number): string => {
+  const happyColors = ['#FFD630', '#AFA680', '#C7B468', '#DFC350'];
+  return happyColors[index % happyColors.length];
+};
+
+// 다른 감정의 물결 색상 배열 (원본 색상 + 그레이 15%, 30%, 45% 블렌딩, 총 5개) (컴포넌트 외부로 이동 - 함수 참조 안정화)
+const getEmotionWaveColors = (emotion: string): string[] => {
+  const baseColor = getEmotionColor(emotion);
+  return [
+    baseColor, // 원본 색상
+    blendWithGray(baseColor, 0.15), // 15% 그레이
+    blendWithGray(baseColor, 0.30), // 30% 그레이
+    blendWithGray(baseColor, 0.45), // 45% 그레이
+    baseColor, // 원본 색상 (5번째)
+  ];
+};
+
+// 모든 감정에서 공유하는 물결 높이 배열 (높이가 아예 없는 건 없음, 최소 10 이상) (컴포넌트 외부로 이동 - 참조 안정화)
+const WAVE_HEIGHTS = [10, 30, 50, 70]; // percentage 값들
+
 // 웨이브 원 컴포넌트 (각 원이 독립적으로 애니메이션)
 interface WaveCircleProps {
   recording: Recording;
@@ -253,8 +306,6 @@ const EmotionDetailScreen: FC = () => {
     return filtered;
   }, [recordingIds, emotion, viewMode]); // recordingIds를 의존성으로 사용하여 실제 내용 변경 시에만 재계산
 
-  // 모든 감정에서 공유하는 물결 높이 배열 (높이가 아예 없는 건 없음, 최소 10 이상)
-  const waveHeights = [10, 30, 50, 70]; // percentage 값들
 
   // 현재 슬라이드의 기록 데이터 (무한 슬라이드)
   const currentRecording = useMemo(() => {
@@ -277,55 +328,16 @@ const EmotionDetailScreen: FC = () => {
     return emotionRecordings[nextIndex];
   }, [emotionRecordings, currentSlideIndex]);
 
-  // HEX 색상을 RGB로 변환
-  const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result
-      ? {
-          r: parseInt(result[1], 16),
-          g: parseInt(result[2], 16),
-          b: parseInt(result[3], 16),
-        }
-      : { r: 0, g: 0, b: 0 };
-  };
-
-  // RGB를 HEX로 변환
-  const rgbToHex = (r: number, g: number, b: number): string => {
-    return `#${[r, g, b].map(x => {
-      const hex = Math.round(x).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    }).join('')}`;
-  };
-
-  // 색상과 그레이를 블렌딩하는 함수 (grayPercent: 0~1)
-  const blendWithGray = (color: string, grayPercent: number): string => {
-    const rgb = hexToRgb(color);
-    const grayValue = 128; // 중간 그레이 (50%)
-    
-    const blendedR = rgb.r * (1 - grayPercent) + grayValue * grayPercent;
-    const blendedG = rgb.g * (1 - grayPercent) + grayValue * grayPercent;
-    const blendedB = rgb.b * (1 - grayPercent) + grayValue * grayPercent;
-    
-    return rgbToHex(blendedR, blendedG, blendedB);
-  };
-
-  // 행복 감정의 물결 색상 배열 (4개 이상이면 4개 색상 순환)
-  const getHappyWaveColor = (index: number): string => {
-    const happyColors = ['#FFD630', '#AFA680', '#C7B468', '#DFC350'];
-    return happyColors[index % happyColors.length];
-  };
-
-  // 다른 감정의 물결 색상 배열 (원본 색상 + 그레이 15%, 30%, 45% 블렌딩, 총 5개)
-  const getEmotionWaveColors = (emotion: string): string[] => {
-    const baseColor = getEmotionColor(emotion);
-    return [
-      baseColor, // 원본 색상
-      blendWithGray(baseColor, 0.15), // 15% 그레이
-      blendWithGray(baseColor, 0.30), // 30% 그레이
-      blendWithGray(baseColor, 0.45), // 45% 그레이
-      baseColor, // 원본 색상 (5번째)
-    ];
-  };
+  // findIndex 결과를 메모이제이션 (리렌더링 방지)
+  const recordingIndices = useMemo(() => {
+    const indices: { [key: number]: number } = {};
+    emotionRecordings.forEach((rec, index) => {
+      if (rec.id) {
+        indices[rec.id] = index;
+      }
+    });
+    return indices;
+  }, [emotionRecordings]);
 
   // 현재 슬라이드의 recording ID 업데이트 (리렌더링 없이)
   useEffect(() => {
@@ -373,8 +385,8 @@ const EmotionDetailScreen: FC = () => {
           const circleHeight = circleRadius * 2;
           
           const seed = recId * 7919;
-          const randomIndex = seed % waveHeights.length;
-          const waveHeight = waveHeights[randomIndex];
+          const randomIndex = seed % WAVE_HEIGHTS.length;
+          const waveHeight = WAVE_HEIGHTS[randomIndex];
           const waterHeight = (circleHeight * waveHeight) / 100;
           const waterTopY = circleBottom - waterHeight;
           const waveY = waterTopY;
@@ -628,46 +640,46 @@ const EmotionDetailScreen: FC = () => {
           ]}
         >
           {/* 이전 원 (왼쪽) */}
-          {prevRecording && (
+          {prevRecording && prevRecording.id !== undefined && (
             <View style={styles.sideCircleContainer}>
               <WaveCircle
                 recording={prevRecording}
-                index={emotionRecordings.findIndex(r => r.id === prevRecording.id)}
+                index={recordingIndices[prevRecording.id] ?? 0}
                 position="prev"
                 getEmotionColor={getEmotionColor}
                 getHappyWaveColor={getHappyWaveColor}
                 getEmotionWaveColors={getEmotionWaveColors}
-                waveHeights={waveHeights}
+                waveHeights={WAVE_HEIGHTS}
               />
             </View>
           )}
           
           {/* 현재 원 (가운데) */}
-          {currentRecording && (
+          {currentRecording && currentRecording.id !== undefined && (
             <View style={styles.centerCircleContainer}>
               <WaveCircle
                 recording={currentRecording}
-                index={emotionRecordings.findIndex(r => r.id === currentRecording.id)}
+                index={recordingIndices[currentRecording.id] ?? 0}
                 position="current"
                 getEmotionColor={getEmotionColor}
                 getHappyWaveColor={getHappyWaveColor}
                 getEmotionWaveColors={getEmotionWaveColors}
-                waveHeights={waveHeights}
+                waveHeights={WAVE_HEIGHTS}
               />
             </View>
           )}
           
           {/* 다음 원 (오른쪽) */}
-          {nextRecording && (
+          {nextRecording && nextRecording.id !== undefined && (
             <View style={styles.sideCircleContainer}>
               <WaveCircle
                 recording={nextRecording}
-                index={emotionRecordings.findIndex(r => r.id === nextRecording.id)}
+                index={recordingIndices[nextRecording.id] ?? 0}
                 position="next"
                 getEmotionColor={getEmotionColor}
                 getHappyWaveColor={getHappyWaveColor}
                 getEmotionWaveColors={getEmotionWaveColors}
-                waveHeights={waveHeights}
+                waveHeights={WAVE_HEIGHTS}
               />
             </View>
           )}
