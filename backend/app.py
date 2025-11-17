@@ -490,7 +490,20 @@ def get_audio(filename):
         if not os.path.exists(filepath):
             return jsonify({'error': '파일을 찾을 수 없습니다.'}), 404
         
-        return send_file(filepath)
+        # 파일 확장자에 따라 MIME 타입 설정
+        mimetype = None
+        file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        mime_types = {
+            'wav': 'audio/wav',
+            'mp3': 'audio/mpeg',
+            'm4a': 'audio/mp4',
+            'ogg': 'audio/ogg',
+            'webm': 'audio/webm',
+            'mp4': 'audio/mp4',
+        }
+        mimetype = mime_types.get(file_ext, 'application/octet-stream')
+        
+        return send_file(filepath, mimetype=mimetype)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

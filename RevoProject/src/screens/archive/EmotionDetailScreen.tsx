@@ -225,6 +225,12 @@ const EmotionDetailScreen: FC = () => {
     return now.getMonth() + 1; // 1-12
   }, []);
 
+  // recordings의 ID 배열만 비교하여 실제 변경 여부 확인 (참조 동일성 문제 해결)
+  const recordingIds = useMemo(() => 
+    recordings.map(r => r.id).filter((id): id is number => id !== undefined).join(','), 
+    [recordings]
+  );
+
   // 해당 감정의 기록만 필터링
   const emotionRecordings = useMemo(() => {
     let filtered = recordings.filter(rec => rec.emotion === emotion);
@@ -245,37 +251,10 @@ const EmotionDetailScreen: FC = () => {
     emotionRecordingsRef.current = filtered;
     
     return filtered;
-  }, [recordings, emotion, viewMode]);
+  }, [recordingIds, emotion, viewMode]); // recordingIds를 의존성으로 사용하여 실제 내용 변경 시에만 재계산
 
   // 모든 감정에서 공유하는 물결 높이 배열 (높이가 아예 없는 건 없음, 최소 10 이상)
   const waveHeights = [10, 30, 50, 70]; // percentage 값들
-
-  // 각 기록의 높이를 미리 계산 (인덱스 기반으로 중복 방지)
-  const recordingHeights = useMemo(() => {
-    const heights: { [key: number]: number } = {};
-    // emotionRecordings 배열을 정렬하여 일관된 순서 보장 (날짜순 또는 ID순)
-    const sortedRecordings = [...emotionRecordings].sort((a, b) => {
-      if (!a.id || !b.id) return 0;
-      return a.id - b.id; // ID 순으로 정렬
-    });
-    
-    sortedRecordings.forEach((rec, index) => {
-      if (!rec.id) return;
-      if (index < waveHeights.length) {
-        // 첫 4개는 중복 없이 할당
-        heights[rec.id] = waveHeights[index];
-        console.log(`Recording ${rec.id} (index ${index}): height ${waveHeights[index]}`);
-      } else {
-        // 5번째부터는 랜덤 (recording.id를 시드로 사용)
-        const randomIndex = rec.id % waveHeights.length;
-        heights[rec.id] = waveHeights[randomIndex];
-        console.log(`Recording ${rec.id} (index ${index}): height ${waveHeights[randomIndex]} (random)`);
-      }
-    });
-    console.log('recordingHeights:', heights);
-    console.log('emotionRecordings count:', emotionRecordings.length);
-    return heights;
-  }, [emotionRecordings]);
 
   // 현재 슬라이드의 기록 데이터 (무한 슬라이드)
   const currentRecording = useMemo(() => {
@@ -438,7 +417,18 @@ const EmotionDetailScreen: FC = () => {
             limit: 1000
           });
           if (response.success) {
-            setRecordings(response.recordings);
+            // 배열이 실제로 변경되었을 때만 업데이트 (참조 동일성 문제 방지)
+            setRecordings(prev => {
+              const prevIds = prev.map(r => r.id).filter((id): id is number => id !== undefined).join(',');
+              const newIds = response.recordings.map(r => r.id).filter((id): id is number => id !== undefined).join(',');
+              
+              // ID 배열이 같으면 이전 참조 유지
+              if (prevIds === newIds) {
+                return prev;
+              }
+              
+              return response.recordings;
+            });
           }
         }
       } catch (error) {
