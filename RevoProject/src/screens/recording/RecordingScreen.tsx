@@ -474,8 +474,23 @@ const RecordingScreen: FC = () => {
 
     setIsUploading(true);
     try {
-      // 위치 정보 가져오기 (없으면 null)
-      const district = currentDistrict || await getCurrentLocation();
+      // 위치 정보 가져오기 (없으면 null) - 타임아웃 설정
+      let district: string | null = null;
+      if (currentDistrict) {
+        district = currentDistrict;
+      } else {
+        try {
+          district = await Promise.race([
+            getCurrentLocation(),
+            new Promise<string | null>((resolve) => {
+              setTimeout(() => resolve(null), 3000); // 3초 타임아웃
+            })
+          ]);
+        } catch (error) {
+          console.error('위치 정보 가져오기 실패:', error);
+          district = null;
+        }
+      }
       
       // 프론트엔드에서 인식한 텍스트와 위치 정보를 함께 전송
       const response = await uploadRecording(audioBlob, user.id, frontendTranscript, undefined, district || undefined);
@@ -483,10 +498,14 @@ const RecordingScreen: FC = () => {
         setRecordingData(response.recording);
         // 키워드 화면으로 이동
         setShowKeywords(true);
-        // 총 녹음 시간 새로고침 (비동기로 처리하여 업로드 완료를 방해하지 않음)
+        // 총 녹음 시간 새로고침 (업로드 완료 후 백그라운드에서 처리)
         setTimeout(() => {
-          refreshArchiveDuration();
-        }, 0);
+          try {
+            refreshArchiveDuration();
+          } catch (error) {
+            console.error('총 녹음 시간 새로고침 오류:', error);
+          }
+        }, 100);
       }
     } catch (error: any) {
       console.error('업로드 오류:', error);
