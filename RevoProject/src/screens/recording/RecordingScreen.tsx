@@ -714,13 +714,28 @@ const RecordingScreen: FC = () => {
     try {
       const response = await updateRecording(recordingData.id, finalHighlightTime);
       if (response.success) {
-        setRecordingData(response.recording);
+        // recordingData 업데이트 (response.recording이 있으면 사용, 없으면 기존 데이터 유지)
+        if (response.recording) {
+          setRecordingData(response.recording);
+        } else {
+          // response.recording이 없으면 기존 recordingData에 highlight_time만 업데이트
+          setRecordingData({
+            ...recordingData,
+            highlight_time: finalHighlightTime || null,
+          });
+        }
+        setShowHighlight(false);
+        setShowSaved(true);
+      } else {
+        // 업데이트 실패해도 저장 완료 화면으로 이동 (하이라이트만 저장 안 됨)
         setShowHighlight(false);
         setShowSaved(true);
       }
     } catch (error: any) {
       console.error('하이라이트 업데이트 오류:', error);
-      Alert.alert('오류', '하이라이트 저장에 실패했습니다.');
+      // 에러가 발생해도 저장 완료 화면으로 이동
+      setShowHighlight(false);
+      setShowSaved(true);
     }
   };
 
