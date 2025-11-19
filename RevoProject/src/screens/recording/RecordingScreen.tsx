@@ -496,9 +496,9 @@ const RecordingScreen: FC = () => {
   const handleKeywordsNext = () => {
     setShowKeywords(false);
     setShowHighlight(true);
-    // 하이라이트 화면 진입 시 0.99초에 마커 표시
-    setHighlightTimeSeconds(0.99);
-    setHighlightTime(formatHighlightTime(0.99));
+    // 하이라이트 화면 진입 시 0초에 마커 표시 (저장 완료 화면과 동일하게)
+    setHighlightTimeSeconds(0);
+    setHighlightTime(formatHighlightTime(0));
     setShowHighlightMarker(true);
     setHighlightTimeInput('');
     setIsDragging(false);
@@ -1139,7 +1139,7 @@ const RecordingScreen: FC = () => {
             onPress={handleUploadRecording}
             disabled={isUploading}
           >
-            <Text style={styles.nextButtonText}>
+            <Text style={styles.nextButtonText} numberOfLines={1}>
               {isUploading ? '분석 중' : '다음'}
             </Text>
           </TouchableOpacity>
@@ -1305,15 +1305,21 @@ const RecordingScreen: FC = () => {
               <View style={styles.highlightTimelineBar} />
               
               {/* 하이라이트 마커 (드래그 가능) - 바를 클릭했을 때만 표시 */}
-              {showHighlightMarker && (
-                <View 
-                  style={[
-                    styles.highlightMarkerContainer,
-                    {
-                      left: getMarkerPosition() - MARKER_SIZE / 2, // 마커 중심 정렬 (getMarkerPosition이 이미 중심 위치를 반환)
-                    }
-                  ]}
-                >
+              {showHighlightMarker && result && (() => {
+                const totalSeconds = Math.max(result.duration, 1);
+                // 마커가 화면 밖으로 나가지 않도록 범위 조정
+                const usableWidth = TIMELINE_WIDTH - MARKER_SIZE;
+                const markerPosition = MARKER_SIZE / 2 + (highlightTimeSeconds / totalSeconds) * usableWidth;
+                
+                return (
+                  <View 
+                    style={[
+                      styles.highlightMarkerContainer,
+                      {
+                        left: markerPosition - MARKER_SIZE / 2, // 마커 중심 정렬
+                      }
+                    ]}
+                  >
                   <View style={styles.highlightMarker}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 38 38" fill="none">
                       <circle cx="19.0022" cy="19.0022" r="19.0022" fill="#FFD630"/>
@@ -1335,7 +1341,8 @@ const RecordingScreen: FC = () => {
                     </svg>
                   </View>
                 </View>
-              )}
+                );
+              })()}
             </View>
           </View>
           
@@ -2086,7 +2093,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     paddingHorizontal: 32,
     paddingVertical: 10,
-    width: 108,
+    minWidth: 108,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
@@ -2100,6 +2107,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
     fontFamily: Platform.OS === 'web' ? 'Pretendard' : undefined,
+    flexShrink: 0,
   },
   // 키워드 화면 스타일
   keywordsScreen: {
