@@ -230,10 +230,37 @@ def create_recording():
         # 오디오 duration 계산
         audio_duration = None
         try:
-            from pydub import AudioSegment
-            audio = AudioSegment.from_file(filepath)
-            audio_duration = len(audio) / 1000.0  # 밀리초를 초로 변환
-            print(f"오디오 duration 계산 완료: {audio_duration}초")
+            # 방법 1: pydub 사용 시도
+            try:
+                from pydub import AudioSegment
+                audio = AudioSegment.from_file(filepath)
+                audio_duration = len(audio) / 1000.0  # 밀리초를 초로 변환
+                print(f"오디오 duration 계산 완료 (pydub): {audio_duration}초")
+            except ImportError:
+                # 방법 2: ffprobe 사용 (ffmpeg의 일부)
+                import subprocess
+                import json
+                
+                # ffprobe로 duration 추출
+                cmd = [
+                    'ffprobe',
+                    '-v', 'quiet',
+                    '-print_format', 'json',
+                    '-show_format',
+                    filepath
+                ]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    data = json.loads(result.stdout)
+                    duration_str = data.get('format', {}).get('duration')
+                    if duration_str:
+                        audio_duration = float(duration_str)
+                        print(f"오디오 duration 계산 완료 (ffprobe): {audio_duration}초")
+                    else:
+                        print("오디오 duration 계산 실패: ffprobe에서 duration을 찾을 수 없음")
+                else:
+                    print(f"오디오 duration 계산 실패: ffprobe 실행 실패 - {result.stderr}")
         except Exception as duration_error:
             print(f"오디오 duration 계산 실패 (계속 진행): {str(duration_error)}")
             # duration 계산 실패해도 계속 진행 (기존 녹음과의 호환성을 위해)

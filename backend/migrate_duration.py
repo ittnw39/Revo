@@ -6,7 +6,15 @@
 import sqlite3
 import os
 from pathlib import Path
-from pydub import AudioSegment
+
+# pydub는 선택적으로 import (duration 계산할 때만 필요)
+try:
+    from pydub import AudioSegment
+    PYDUB_AVAILABLE = True
+except ImportError:
+    PYDUB_AVAILABLE = False
+    print("⚠️  pydub를 사용할 수 없습니다. duration 컬럼 추가만 수행합니다.")
+    print("   duration 계산을 원하면: pip install pydub pyaudioop")
 
 UPLOAD_FOLDER = 'uploads'
 
@@ -65,6 +73,13 @@ def migrate_duration_column():
 
 def update_existing_durations():
     """기존 녹음들의 duration 계산 및 업데이트"""
+    if not PYDUB_AVAILABLE:
+        print("❌ pydub를 사용할 수 없어 duration 계산을 수행할 수 없습니다.")
+        print("   다음 명령어로 설치하세요:")
+        print("   pip install pydub pyaudioop")
+        print("   또는 가상환경 사용: venv\\Scripts\\python.exe migrate_duration.py --update-existing")
+        return False
+    
     # 데이터베이스 파일 경로 확인
     db_paths = [
         Path('instance/revo.db'),
