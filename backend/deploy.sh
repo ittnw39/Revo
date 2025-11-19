@@ -128,6 +128,35 @@ echo "5️⃣ 컨테이너 상태 확인 중..."
 sleep 3
 docker-compose ps
 
+# 5-1. DB 마이그레이션 실행 (duration 컬럼 추가)
+echo ""
+echo "5-1️⃣ DB 마이그레이션 실행 중 (duration 컬럼 추가)..."
+if [ -f migrate_duration.py ]; then
+    # 컨테이너 내부에서 마이그레이션 실행
+    docker-compose exec -T backend python migrate_duration.py 2>/dev/null || \
+    docker-compose run --rm backend python migrate_duration.py 2>/dev/null || \
+    echo "   ⚠️  컨테이너 내부 실행 실패, 호스트에서 실행 시도..."
+    
+    # 호스트에서 실행 (Python 환경이 있는 경우)
+    if command -v python3 &> /dev/null; then
+        # pydub가 설치되어 있는지 확인
+        if python3 -c "import pydub" 2>/dev/null; then
+            echo "   📝 호스트에서 마이그레이션 실행 중..."
+            python3 migrate_duration.py || echo "   ⚠️  마이그레이션 실행 실패 (수동 실행 필요)"
+        else
+            echo "   ⚠️  호스트에 pydub가 설치되지 않음"
+            echo "   💡 컨테이너가 완전히 시작된 후 수동 실행:"
+            echo "      docker-compose exec backend python migrate_duration.py"
+        fi
+    else
+        echo "   ⚠️  호스트에 Python3가 설치되지 않음"
+        echo "   💡 컨테이너가 완전히 시작된 후 수동 실행:"
+        echo "      docker-compose exec backend python migrate_duration.py"
+    fi
+else
+    echo "   ⚠️  migrate_duration.py 파일을 찾을 수 없습니다"
+fi
+
 # 6. API 키 확인
 echo ""
 echo "6️⃣ API 키 확인 중..."
