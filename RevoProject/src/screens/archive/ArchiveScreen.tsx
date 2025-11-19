@@ -115,7 +115,7 @@ const ArchiveScreen: FC = () => {
       }
 
       let totalSeconds = 0;
-      const timeout = 5000; // 5초 타임아웃
+      const timeout = 10000; // 10초 타임아웃 (5초에서 10초로 증가)
       
       for (const recording of filteredRecordings) {
         try {

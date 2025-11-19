@@ -11,7 +11,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import Svg, { Path, Circle, G, Mask, Ellipse, Rect, Text as SvgText } from 'react-native-svg';
@@ -870,33 +870,41 @@ const RecordsScreen: FC = () => {
     );
   };
 
-  // 녹음 데이터 로드 (모든 녹음 가져오기 - 날짜별 필터링을 위해)
-  useEffect(() => {
-    const loadRecordings = async () => {
-      try {
-        setLoading(true);
-        const userInfo = getUserFromStorage();
-        if (userInfo) {
-          setUserName(userInfo.name);
-          setCurrentUserId(userInfo.id);
-          // 모든 녹음 가져오기 (날짜별 필터링을 위해)
-          const response = await getRecordings({ 
-            userId: userInfo.id,
-            limit: 100 // 충분히 많이 가져오기
-          });
-          if (response.success) {
-            setRecordings(response.recordings);
-          }
+  // 녹음 데이터 로드 함수
+  const loadRecordings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const userInfo = getUserFromStorage();
+      if (userInfo) {
+        setUserName(userInfo.name);
+        setCurrentUserId(userInfo.id);
+        // 모든 녹음 가져오기 (날짜별 필터링을 위해)
+        const response = await getRecordings({ 
+          userId: userInfo.id,
+          limit: 100 // 충분히 많이 가져오기
+        });
+        if (response.success) {
+          setRecordings(response.recordings);
         }
-      } catch (error) {
-        console.error('녹음 데이터 로드 오류:', error);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    loadRecordings();
+    } catch (error) {
+      console.error('녹음 데이터 로드 오류:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // 초기 로드
+  useEffect(() => {
+    loadRecordings();
+  }, [loadRecordings]);
+
+  // 화면이 포커스될 때마다 데이터 새로고침 (녹음 완료 후 자동 반영)
+  useFocusEffect(
+    useCallback(() => {
+      loadRecordings();
+    }, [loadRecordings])
+  );
 
   // 온보딩 완료 상태 확인
   useEffect(() => {
