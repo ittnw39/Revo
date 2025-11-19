@@ -708,26 +708,36 @@ const RecordingScreen: FC = () => {
   const handleHighlightSave = async () => {
     if (!recordingData) return;
 
-    // 하이라이트 마커가 표시되어 있으면 시간 저장, 없으면 빈 문자열
-    const finalHighlightTime = showHighlightMarker ? secondsToTimeString(highlightTimeSeconds) : '';
+    // 하이라이트 마커를 조작하지 않았으면 건너뛰기와 동일하게 처리
+    // (showHighlightMarker가 false이거나 highlightTimeSeconds가 초기값 0이면 건너뛰기)
+    if (!showHighlightMarker || highlightTimeSeconds === 0) {
+      // 건너뛰기와 동일하게 처리
+      if (recordingData) {
+        try {
+          const response = await updateRecording(recordingData.id, '');
+          if (response.success && response.recording) {
+            setRecordingData(response.recording);
+          }
+        } catch (error: any) {
+          console.error('건너뛰기 저장 오류:', error);
+        }
+      }
+      setShowHighlight(false);
+      setShowSaved(true);
+      return;
+    }
+
+    // 하이라이트 마커를 조작한 경우에만 시간 저장
+    const finalHighlightTime = secondsToTimeString(highlightTimeSeconds);
 
     try {
       const response = await updateRecording(recordingData.id, finalHighlightTime);
-      if (response.success) {
-        // recordingData 업데이트 (response.recording이 있으면 사용, 없으면 기존 데이터 유지)
-        if (response.recording) {
-          setRecordingData(response.recording);
-        } else {
-          // response.recording이 없으면 기존 recordingData에 highlight_time만 업데이트
-          setRecordingData({
-            ...recordingData,
-            highlight_time: finalHighlightTime || null,
-          });
-        }
+      if (response.success && response.recording) {
+        setRecordingData(response.recording);
         setShowHighlight(false);
         setShowSaved(true);
       } else {
-        // 업데이트 실패해도 저장 완료 화면으로 이동 (하이라이트만 저장 안 됨)
+        // 업데이트 실패해도 저장 완료 화면으로 이동
         setShowHighlight(false);
         setShowSaved(true);
       }
