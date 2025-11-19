@@ -71,7 +71,7 @@ const RecordingScreen: FC = () => {
 
   // 웨이브 애니메이션을 위한 offset 값
   const [waveOffset, setWaveOffset] = useState<number>(0);
-  const { isOnboardingCompleted } = useApp();
+  const { isOnboardingCompleted, refreshArchiveDuration } = useApp();
 
   // 녹음 상태
   const [isRecording, setIsRecording] = useState(false);
@@ -483,6 +483,8 @@ const RecordingScreen: FC = () => {
         setRecordingData(response.recording);
         // 키워드 화면으로 이동
         setShowKeywords(true);
+        // 총 녹음 시간 새로고침
+        refreshArchiveDuration();
       }
     } catch (error: any) {
       console.error('업로드 오류:', error);
@@ -694,6 +696,8 @@ const RecordingScreen: FC = () => {
         setRecordingData(response.recording);
         setShowHighlight(false);
         setShowSaved(true);
+        // 총 녹음 시간 새로고침
+        refreshArchiveDuration();
       }
     } catch (error: any) {
       console.error('하이라이트 업데이트 오류:', error);
@@ -1365,6 +1369,8 @@ const RecordingScreen: FC = () => {
                 }
                 setShowHighlight(false);
                 setShowSaved(true);
+                // 총 녹음 시간 새로고침
+                refreshArchiveDuration();
               }}
             >
               <Text style={styles.skipButtonText}>건너뛰기</Text>

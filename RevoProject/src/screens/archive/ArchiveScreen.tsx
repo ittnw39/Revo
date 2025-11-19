@@ -39,7 +39,7 @@ type ArchiveScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 
 const ArchiveScreen: FC = () => {
   const navigation = useNavigation<ArchiveScreenNavigationProp>();
-  const { isOnboardingCompleted } = useApp();
+  const { isOnboardingCompleted, totalArchiveDuration } = useApp();
   const [viewMode, setViewMode] = useState<'monthly' | 'all'>('monthly'); // 'monthly' 또는 'all'
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -103,115 +103,11 @@ const ArchiveScreen: FC = () => {
     return recordings;
   }, [recordings, viewMode]);
 
-  // 총 녹음 시간 계산 (초 단위) - 백그라운드에서 점진적으로 업데이트
-  const [totalDuration, setTotalDuration] = useState<number>(0);
-
-  useEffect(() => {
-    // 화면은 즉시 표시하고, duration 계산은 백그라운드에서 처리
-    if (filteredRecordings.length === 0) {
-      setTotalDuration(0);
-      return;
-    }
-
-    // 초기값 0으로 설정하여 화면이 즉시 표시되도록 함
-    setTotalDuration(0);
-
-    // 백그라운드에서 duration 계산 시작
-    const calculateTotalDuration = async () => {
-      // 웹 환경에서만 Audio API 사용 가능
-      if (Platform.OS !== 'web') {
-        return;
-      }
-
-      let totalSeconds = 0;
-      const timeout = 5000; // 5초 타임아웃
-      
-      // 각 녹음의 duration을 병렬로 처리 (더 빠름)
-      const durationPromises = filteredRecordings.map((recording) => {
-        return new Promise<number>((resolve) => {
-          try {
-            // 오디오 URL 구성
-            let fullUrl: string;
-            if (recording.audio_url && recording.audio_url.startsWith('http')) {
-              fullUrl = recording.audio_url;
-            } else if (recording.audio_file) {
-              fullUrl = getAudioUrl(recording.audio_file);
-            } else {
-              resolve(0);
-              return;
-            }
-            
-            // 오디오 파일의 duration 가져오기
-            const audio = new (window as any).Audio(fullUrl);
-            let resolved = false;
-            let timeoutId: number | null = null;
-            
-            const cleanup = () => {
-              if (!resolved) {
-                resolved = true;
-                if (timeoutId !== null) {
-                  clearTimeout(timeoutId);
-                  timeoutId = null;
-                }
-                audio.removeEventListener('loadedmetadata', onLoadedMetadata);
-                audio.removeEventListener('error', onError);
-                audio.removeEventListener('canplaythrough', onCanPlayThrough);
-              }
-            };
-            
-            const onLoadedMetadata = () => {
-              if (!resolved && audio.duration && isFinite(audio.duration)) {
-                cleanup();
-                resolve(audio.duration);
-              }
-            };
-            
-            const onCanPlayThrough = () => {
-              if (!resolved && audio.duration && isFinite(audio.duration)) {
-                cleanup();
-                resolve(audio.duration);
-              }
-            };
-            
-            const onError = () => {
-              cleanup();
-              resolve(0); // 에러 시 0 반환
-            };
-            
-            audio.addEventListener('loadedmetadata', onLoadedMetadata);
-            audio.addEventListener('canplaythrough', onCanPlayThrough);
-            audio.addEventListener('error', onError);
-            
-            // 타임아웃 설정
-            timeoutId = setTimeout(() => {
-              if (!resolved) {
-                cleanup();
-                resolve(0); // 타임아웃 시 0 반환 (조용히 처리)
-              }
-            }, timeout) as unknown as number;
-            
-            audio.load();
-          } catch (error) {
-            resolve(0);
-          }
-        });
-      });
-
-      // 모든 duration을 병렬로 가져온 후 합산
-      const durations = await Promise.all(durationPromises);
-      totalSeconds = durations.reduce((sum, duration) => sum + duration, 0);
-      
-      // 점진적으로 업데이트
-      setTotalDuration(totalSeconds);
-    };
-
-    // 백그라운드에서 실행 (화면 블로킹 없음)
-    calculateTotalDuration();
-  }, [filteredRecordings]);
-
-  // 총 시간을 분 또는 초로 변환
+  // 총 시간을 분 또는 초로 변환 (Context에서 가져온 값 사용)
   const totalTimeDisplay = useMemo(() => {
-    const totalSeconds = Math.floor(totalDuration);
+    // viewMode에 따라 필터링된 녹음의 시간만 계산
+    // 하지만 전체 녹음 시간을 사용 (월별/전체 모드에 따라 다르게 표시할 수도 있음)
+    const totalSeconds = Math.floor(totalArchiveDuration);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
 
@@ -220,7 +116,7 @@ const ArchiveScreen: FC = () => {
     } else {
       return `${seconds}초`;
     }
-  }, [totalDuration]);
+  }, [totalArchiveDuration]);
 
   // 웨이브 애니메이션 시작
   useEffect(() => {

@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { Platform } from 'react-native';
+import { getRecordings, getUserFromStorage, Recording, getAudioUrl } from '../services/api';
 
 // 웹 환경에서 localStorage 사용을 위한 타입 선언
 declare const localStorage: {
@@ -18,6 +20,8 @@ interface AppContextType {
   setSettingsView: (view: string) => void;
   accessibilityStep: number;
   setAccessibilityStep: (step: number) => void;
+  totalArchiveDuration: number;
+  refreshArchiveDuration: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -32,6 +36,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [lastVisitedScreen, setLastVisitedScreen] = useState<string>('Recording');
   const [settingsView, setSettingsView] = useState<string>('main');
   const [accessibilityStep, setAccessibilityStep] = useState<number>(0);
+  const [totalArchiveDuration, setTotalArchiveDuration] = useState<number>(0);
 
   // 앱 시작 시 localStorage에서 상태 복원
   useEffect(() => {
@@ -78,6 +83,113 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setAccessibilityStep(step);
   };
 
+  // 총 녹음 시간 계산 함수
+  const calculateTotalDuration = useCallback(async (recordings: Recording[]) => {
+    if (Platform.OS !== 'web' || recordings.length === 0) {
+      setTotalArchiveDuration(0);
+      return;
+    }
+
+    const timeout = 5000;
+    
+    // 각 녹음의 duration을 병렬로 처리
+    const durationPromises = recordings.map((recording) => {
+      return new Promise<number>((resolve) => {
+        try {
+          let fullUrl: string;
+          if (recording.audio_url && recording.audio_url.startsWith('http')) {
+            fullUrl = recording.audio_url;
+          } else if (recording.audio_file) {
+            fullUrl = getAudioUrl(recording.audio_file);
+          } else {
+            resolve(0);
+            return;
+          }
+          
+          const audio = new (window as any).Audio(fullUrl);
+          let resolved = false;
+          let timeoutId: number | null = null;
+          
+          const cleanup = () => {
+            if (!resolved) {
+              resolved = true;
+              if (timeoutId !== null) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+              audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+              audio.removeEventListener('error', onError);
+              audio.removeEventListener('canplaythrough', onCanPlayThrough);
+            }
+          };
+          
+          const onLoadedMetadata = () => {
+            if (!resolved && audio.duration && isFinite(audio.duration)) {
+              cleanup();
+              resolve(audio.duration);
+            }
+          };
+          
+          const onCanPlayThrough = () => {
+            if (!resolved && audio.duration && isFinite(audio.duration)) {
+              cleanup();
+              resolve(audio.duration);
+            }
+          };
+          
+          const onError = () => {
+            cleanup();
+            resolve(0);
+          };
+          
+          audio.addEventListener('loadedmetadata', onLoadedMetadata);
+          audio.addEventListener('canplaythrough', onCanPlayThrough);
+          audio.addEventListener('error', onError);
+          
+          timeoutId = setTimeout(() => {
+            if (!resolved) {
+              cleanup();
+              resolve(0);
+            }
+          }, timeout) as unknown as number;
+          
+          audio.load();
+        } catch (error) {
+          resolve(0);
+        }
+      });
+    });
+
+    const durations = await Promise.all(durationPromises);
+    const totalSeconds = durations.reduce((sum, duration) => sum + duration, 0);
+    setTotalArchiveDuration(totalSeconds);
+  }, []);
+
+  // 총 녹음 시간 새로고침 함수
+  const refreshArchiveDuration = useCallback(async () => {
+    const userInfo = getUserFromStorage();
+    if (userInfo && isOnboardingCompleted) {
+      try {
+        const response = await getRecordings({ 
+          userId: userInfo.id,
+          limit: 1000
+        });
+        if (response.success) {
+          await calculateTotalDuration(response.recordings);
+        }
+      } catch (error) {
+        console.error('총 녹음 시간 계산 오류:', error);
+      }
+    }
+  }, [isOnboardingCompleted, calculateTotalDuration]);
+
+  // 온보딩 완료 후 총 녹음 시간 계산
+  useEffect(() => {
+    if (isOnboardingCompleted) {
+      refreshArchiveDuration();
+    }
+  }, [isOnboardingCompleted, refreshArchiveDuration]);
+
   const value: AppContextType = {
     isOnboardingCompleted,
     setOnboardingCompleted,
@@ -89,6 +201,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setSettingsView: handleSetSettingsView,
     accessibilityStep,
     setAccessibilityStep: handleSetAccessibilityStep,
+    totalArchiveDuration,
+    refreshArchiveDuration,
   };
 
   return (
