@@ -696,8 +696,6 @@ const RecordingScreen: FC = () => {
         setRecordingData(response.recording);
         setShowHighlight(false);
         setShowSaved(true);
-        // 총 녹음 시간 새로고침
-        refreshArchiveDuration();
       }
     } catch (error: any) {
       console.error('하이라이트 업데이트 오류:', error);
@@ -1369,8 +1367,6 @@ const RecordingScreen: FC = () => {
                 }
                 setShowHighlight(false);
                 setShowSaved(true);
-                // 총 녹음 시간 새로고침
-                refreshArchiveDuration();
               }}
             >
               <Text style={styles.skipButtonText}>건너뛰기</Text>
