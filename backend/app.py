@@ -227,6 +227,17 @@ def create_recording():
         print(f"파일 크기: {file_size} bytes")
         print(f"파일 존재 확인: {os.path.exists(filepath)}")
         
+        # 오디오 duration 계산
+        audio_duration = None
+        try:
+            from pydub import AudioSegment
+            audio = AudioSegment.from_file(filepath)
+            audio_duration = len(audio) / 1000.0  # 밀리초를 초로 변환
+            print(f"오디오 duration 계산 완료: {audio_duration}초")
+        except Exception as duration_error:
+            print(f"오디오 duration 계산 실패 (계속 진행): {str(duration_error)}")
+            # duration 계산 실패해도 계속 진행 (기존 녹음과의 호환성을 위해)
+        
         # STT 처리
         # 프론트엔드에서 인식한 텍스트가 있으면 우선 사용, 없으면 Whisper 사용
         if frontend_transcript:
@@ -303,6 +314,7 @@ def create_recording():
             emotion=emotion,
             highlight_time=highlight_time,
             district=district if district else None,
+            duration=audio_duration,  # 오디오 재생 시간 (초)
             recorded_at=get_kst_now()
         )
         

@@ -83,85 +83,18 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setAccessibilityStep(step);
   };
 
-  // 총 녹음 시간 계산 함수
+  // 총 녹음 시간 계산 함수 (백엔드에서 제공하는 duration 사용)
   const calculateTotalDuration = useCallback(async (recordings: Recording[]) => {
-    if (Platform.OS !== 'web' || recordings.length === 0) {
+    if (recordings.length === 0) {
       setTotalArchiveDuration(0);
       return;
     }
 
-    const timeout = 5000;
+    // 백엔드에서 제공하는 duration을 사용 (없으면 0으로 처리)
+    const totalSeconds = recordings.reduce((sum, recording) => {
+      return sum + (recording.duration || 0);
+    }, 0);
     
-    // 각 녹음의 duration을 병렬로 처리
-    const durationPromises = recordings.map((recording) => {
-      return new Promise<number>((resolve) => {
-        try {
-          let fullUrl: string;
-          if (recording.audio_url && recording.audio_url.startsWith('http')) {
-            fullUrl = recording.audio_url;
-          } else if (recording.audio_file) {
-            fullUrl = getAudioUrl(recording.audio_file);
-          } else {
-            resolve(0);
-            return;
-          }
-          
-          const audio = new (window as any).Audio(fullUrl);
-          let resolved = false;
-          let timeoutId: number | null = null;
-          
-          const cleanup = () => {
-            if (!resolved) {
-              resolved = true;
-              if (timeoutId !== null) {
-                clearTimeout(timeoutId);
-                timeoutId = null;
-              }
-              audio.removeEventListener('loadedmetadata', onLoadedMetadata);
-              audio.removeEventListener('error', onError);
-              audio.removeEventListener('canplaythrough', onCanPlayThrough);
-            }
-          };
-          
-          const onLoadedMetadata = () => {
-            if (!resolved && audio.duration && isFinite(audio.duration)) {
-              cleanup();
-              resolve(audio.duration);
-            }
-          };
-          
-          const onCanPlayThrough = () => {
-            if (!resolved && audio.duration && isFinite(audio.duration)) {
-              cleanup();
-              resolve(audio.duration);
-            }
-          };
-          
-          const onError = () => {
-            cleanup();
-            resolve(0);
-          };
-          
-          audio.addEventListener('loadedmetadata', onLoadedMetadata);
-          audio.addEventListener('canplaythrough', onCanPlayThrough);
-          audio.addEventListener('error', onError);
-          
-          timeoutId = setTimeout(() => {
-            if (!resolved) {
-              cleanup();
-              resolve(0);
-            }
-          }, timeout) as unknown as number;
-          
-          audio.load();
-        } catch (error) {
-          resolve(0);
-        }
-      });
-    });
-
-    const durations = await Promise.all(durationPromises);
-    const totalSeconds = durations.reduce((sum, duration) => sum + duration, 0);
     setTotalArchiveDuration(totalSeconds);
   }, []);
 

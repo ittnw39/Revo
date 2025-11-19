@@ -71,6 +71,9 @@ class Recording(db.Model):
     # 위치 정보 (동/구)
     district = db.Column(db.String(50), nullable=True)  # 예: "성북동", "강남구"
     
+    # 오디오 재생 시간 (초 단위)
+    duration = db.Column(db.Float, nullable=True)  # 오디오 파일 재생 시간 (초)
+    
     created_at = db.Column(db.DateTime, default=get_kst_now)
     updated_at = db.Column(db.DateTime, default=get_kst_now, onupdate=get_kst_now)
     
@@ -90,6 +93,7 @@ class Recording(db.Model):
             'is_uploaded': self.is_uploaded,
             'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None,
             'district': self.district,
+            'duration': self.duration,  # 오디오 재생 시간 (초)
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }

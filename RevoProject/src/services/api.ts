@@ -35,6 +35,7 @@ export interface Recording {
   is_uploaded: boolean;
   uploaded_at: string | null;
   district: string | null;
+  duration: number | null;  // 오디오 재생 시간 (초)
   created_at: string;
   updated_at: string;
 }
