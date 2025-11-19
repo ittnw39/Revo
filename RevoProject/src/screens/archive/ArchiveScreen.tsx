@@ -103,38 +103,46 @@ const ArchiveScreen: FC = () => {
     return recordings;
   }, [recordings, viewMode]);
 
-  // 총 녹음 시간 계산 (초 단위)
+  // 총 녹음 시간 계산 (초 단위) - 백그라운드에서 점진적으로 업데이트
   const [totalDuration, setTotalDuration] = useState<number>(0);
 
   useEffect(() => {
+    // 화면은 즉시 표시하고, duration 계산은 백그라운드에서 처리
+    if (filteredRecordings.length === 0) {
+      setTotalDuration(0);
+      return;
+    }
+
+    // 초기값 0으로 설정하여 화면이 즉시 표시되도록 함
+    setTotalDuration(0);
+
+    // 백그라운드에서 duration 계산 시작
     const calculateTotalDuration = async () => {
       // 웹 환경에서만 Audio API 사용 가능
       if (Platform.OS !== 'web') {
-        setTotalDuration(0);
         return;
       }
 
       let totalSeconds = 0;
-      const timeout = 10000; // 10초 타임아웃 (5초에서 10초로 증가)
+      const timeout = 5000; // 5초 타임아웃
       
-      for (const recording of filteredRecordings) {
-        try {
-          // 오디오 URL 구성 - getAudioUrl 함수 사용 또는 직접 구성
-          let fullUrl: string;
-          if (recording.audio_url && recording.audio_url.startsWith('http')) {
-            fullUrl = recording.audio_url;
-          } else if (recording.audio_file) {
-            // getAudioUrl 함수 사용
-            fullUrl = getAudioUrl(recording.audio_file);
-          } else {
-            console.warn(`녹음 ${recording.id}에 오디오 파일이 없습니다.`);
-            continue;
-          }
-          
-          // 오디오 파일의 duration 가져오기
-          const audio = new (window as any).Audio(fullUrl);
-          
-          await new Promise<void>((resolve) => {
+      // 각 녹음의 duration을 병렬로 처리 (더 빠름)
+      const durationPromises = filteredRecordings.map((recording) => {
+        return new Promise<number>((resolve) => {
+          try {
+            // 오디오 URL 구성
+            let fullUrl: string;
+            if (recording.audio_url && recording.audio_url.startsWith('http')) {
+              fullUrl = recording.audio_url;
+            } else if (recording.audio_file) {
+              fullUrl = getAudioUrl(recording.audio_file);
+            } else {
+              resolve(0);
+              return;
+            }
+            
+            // 오디오 파일의 duration 가져오기
+            const audio = new (window as any).Audio(fullUrl);
             let resolved = false;
             let timeoutId: number | null = null;
             
@@ -153,24 +161,21 @@ const ArchiveScreen: FC = () => {
             
             const onLoadedMetadata = () => {
               if (!resolved && audio.duration && isFinite(audio.duration)) {
-                totalSeconds += audio.duration;
                 cleanup();
-                resolve();
+                resolve(audio.duration);
               }
             };
             
             const onCanPlayThrough = () => {
               if (!resolved && audio.duration && isFinite(audio.duration)) {
-                totalSeconds += audio.duration;
                 cleanup();
-                resolve();
+                resolve(audio.duration);
               }
             };
             
-            const onError = (e: any) => {
-              console.warn(`오디오 로딩 실패 (recording ${recording.id}, URL: ${fullUrl}):`, e);
+            const onError = () => {
               cleanup();
-              resolve();
+              resolve(0); // 에러 시 0 반환
             };
             
             audio.addEventListener('loadedmetadata', onLoadedMetadata);
@@ -180,27 +185,28 @@ const ArchiveScreen: FC = () => {
             // 타임아웃 설정
             timeoutId = setTimeout(() => {
               if (!resolved) {
-                console.warn(`오디오 로딩 타임아웃 (recording ${recording.id}, URL: ${fullUrl})`);
                 cleanup();
-                resolve();
+                resolve(0); // 타임아웃 시 0 반환 (조용히 처리)
               }
             }, timeout) as unknown as number;
             
             audio.load();
-          });
-        } catch (error) {
-          console.error(`오디오 duration 계산 오류 (recording ${recording.id}):`, error);
-        }
-      }
+          } catch (error) {
+            resolve(0);
+          }
+        });
+      });
+
+      // 모든 duration을 병렬로 가져온 후 합산
+      const durations = await Promise.all(durationPromises);
+      totalSeconds = durations.reduce((sum, duration) => sum + duration, 0);
       
+      // 점진적으로 업데이트
       setTotalDuration(totalSeconds);
     };
 
-    if (filteredRecordings.length > 0) {
-      calculateTotalDuration();
-    } else {
-      setTotalDuration(0);
-    }
+    // 백그라운드에서 실행 (화면 블로킹 없음)
+    calculateTotalDuration();
   }, [filteredRecordings]);
 
   // 총 시간을 분 또는 초로 변환
