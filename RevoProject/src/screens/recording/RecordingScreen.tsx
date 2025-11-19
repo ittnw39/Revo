@@ -483,8 +483,10 @@ const RecordingScreen: FC = () => {
         setRecordingData(response.recording);
         // 키워드 화면으로 이동
         setShowKeywords(true);
-        // 총 녹음 시간 새로고침
-        refreshArchiveDuration();
+        // 총 녹음 시간 새로고침 (비동기로 처리하여 업로드 완료를 방해하지 않음)
+        setTimeout(() => {
+          refreshArchiveDuration();
+        }, 0);
       }
     } catch (error: any) {
       console.error('업로드 오류:', error);
