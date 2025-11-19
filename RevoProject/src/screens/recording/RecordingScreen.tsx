@@ -1135,9 +1135,10 @@ const RecordingScreen: FC = () => {
             <Text style={styles.retryButtonText}>다시 녹음</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.nextButton}
-            onPress={handleUploadRecording}
+            style={[styles.nextButton, isUploading && styles.nextButtonDisabled]}
+            onPress={isUploading ? undefined : handleUploadRecording}
             disabled={isUploading}
+            activeOpacity={isUploading ? 1 : 0.7}
           >
             <Text style={styles.nextButtonText} numberOfLines={1}>
               {isUploading ? '분석 중' : '다음'}
@@ -1485,8 +1486,11 @@ const RecordingScreen: FC = () => {
                   <View style={styles.sadCharacterWrapper}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="393" height="534" viewBox="0 0 393 534" fill="none" style={{ width: '100%', height: '100%' }}>
                       {/* 슬픔 캐릭터 SVG - 배경 rect는 제외하고 캐릭터만 (배경은 별도 렌더링) */}
+                      {/* 원들 */}
                       <circle cx="140.233" cy="108.908" r="53.9077" fill="#F5F5F5"/>
                       <circle cx="252.631" cy="108.908" r="53.9077" fill="#F5F5F5"/>
+                      {/* path를 원들 다음에 배치하여 원보다 높은 z-index */}
+                      <path d="M100.777 133.678H124.919C133.755 133.678 140.919 140.842 140.919 149.678V321.6C140.919 330.437 133.755 337.6 124.919 337.6H116.777C107.94 337.6 100.777 330.437 100.777 321.6V133.678Z" fill="#F5F5F5"/>
                       <mask id="mask0_sad_recording" style={{maskType:"alpha"}} maskUnits="userSpaceOnUse" x="86" y="55" width="109" height="108">
                         <circle cx="140.232" cy="108.908" r="53.9077" fill="#F5F5F5"/>
                       </mask>
@@ -1507,7 +1511,7 @@ const RecordingScreen: FC = () => {
                           <circle cx="60.4755" cy="60.4755" r="53.9108" transform="matrix(-1 0 0 1 365.659 48.4355)" fill="#0A0A0A"/>
                         )}
                       </g>
-                      <path d="M100.777 133.678H124.919C133.755 133.678 140.919 140.842 140.919 149.678V321.6C140.919 330.437 133.755 337.6 124.919 337.6H116.777C107.94 337.6 100.777 330.437 100.777 321.6V133.678Z" fill="#F5F5F5"/>
+                      {/* rect를 검은 원들 다음에 배치하여 가장 높은 z-index */}
                       <rect x="254.921" y="144.918" width="32.9243" height="95.7798" rx="16.4621" fill="#F5F5F5"/>
                       <path d="M211.568 174.927C211.568 158.87 182.666 158.067 182.666 174.927" stroke="#0A0A0A" strokeWidth="8.02842" strokeLinecap="round"/>
                       <path d="M153.88 120.03C153.88 123.65 152.44 127.121 149.88 129.681C147.32 132.241 143.83 133.678 140.23 133.678C136.61 133.678 133.14 132.241 130.58 129.681C128.02 127.121 126.58 123.65 126.58 120.03L140.23 120.03H153.88Z" fill="#F5F5F5"/>
@@ -2098,6 +2102,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 10,
     flexDirection: 'row',
+  },
+  nextButtonDisabled: {
+    backgroundColor: '#A7A7A7',
   },
   nextButtonText: {
     color: '#0B0B0C',
