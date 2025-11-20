@@ -44,7 +44,8 @@ const HighlightEditScreen: FC = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const parseHighlightTime = (timeString: string | null): number => {
+  const parseHighlightTime = (timeString: string | null | undefined): number => {
+    // highlight_time이 null이거나 없으면 00:00(0초) 반환
     if (!timeString) return 0;
     const parts = timeString.split(':');
     if (parts.length === 2) {
@@ -67,6 +68,7 @@ const HighlightEditScreen: FC = () => {
           const response = await getRecording(route.params.recordingId);
           if (response.success && response.recording) {
             setRecording(response.recording);
+            // highlight_time이 null이거나 없으면 00:00(0초)에 마커 표시
             const existingHighlight = parseHighlightTime(response.recording.highlight_time);
             setHighlightTime(existingHighlight);
             
